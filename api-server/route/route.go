@@ -329,7 +329,7 @@ func handleResponse(c *gin.Context, res any, ds int) {
 	// Log detailed warning to help identify which handler needs updating
 	log.Warn(c.Request.Context(),
 		"Response type %T does not implement Stature interface for %s %s - using default 200 OK. "+
-		"Consider wrapping response in response.Response[T] for consistent API responses",
+			"Consider wrapping response in response.Response[T] for consistent API responses",
 		res, c.Request.Method, c.Request.URL.Path)
 	c.JSON(http.StatusOK, res)
 }
