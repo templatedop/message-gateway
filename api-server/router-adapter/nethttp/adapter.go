@@ -78,8 +78,9 @@ func (a *NetHTTPAdapter) RegisterRoute(meta route.Meta) error {
 			rctx.SetParam(k, v)
 		}
 
-		// Apply middlewares from route
-		handler := a.wrapWithMiddlewares(meta.Middlewares, func(ctx *routeradapter.RouterContext) error {
+		// Apply middlewares (route.Meta middlewares are Gin-specific, skip them for net/http)
+		// In a full implementation, we'd convert or have separate handler types
+		handler := a.wrapWithMiddlewares(func(ctx *routeradapter.RouterContext) error {
 			// We can't directly call Gin handler, return success for now
 			return ctx.JSON(200, map[string]string{"status": "ok"})
 		})
@@ -125,8 +126,19 @@ func (a *NetHTTPAdapter) RegisterGroup(prefix string, middlewares []routeradapte
 func (a *NetHTTPAdapter) UseNative(middleware interface{}) error {
 	switch mw := middleware.(type) {
 	case func(http.Handler) http.Handler:
-		// Store as middleware wrapper
-		return nil
+		// Convert to framework-agnostic middleware
+		converted := func(ctx *routeradapter.RouterContext, next func() error) error {
+			// Wrap next as http.Handler
+			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = next()
+			})
+
+			// Apply middleware
+			wrappedHandler := mw(nextHandler)
+			wrappedHandler.ServeHTTP(ctx.Response, ctx.Request)
+			return nil
+		}
+		return a.RegisterMiddleware(converted)
 	case http.Handler:
 		// Can't add http.Handler as middleware directly
 		return fmt.Errorf("http.Handler cannot be used as middleware, use func(http.Handler) http.Handler")
@@ -222,7 +234,7 @@ func (a *NetHTTPAdapter) SetErrorHandler(handler routeradapter.ErrorHandler) {
 }
 
 // wrapWithMiddlewares wraps a handler with middlewares
-func (a *NetHTTPAdapter) wrapWithMiddlewares(ginMiddlewares []interface{}, handler routeradapter.HandlerFunc) routeradapter.HandlerFunc {
+func (a *NetHTTPAdapter) wrapWithMiddlewares(handler routeradapter.HandlerFunc) routeradapter.HandlerFunc {
 	// Apply global middlewares
 	a.mu.RLock()
 	middlewares := make([]routeradapter.MiddlewareFunc, len(a.middlewares))
