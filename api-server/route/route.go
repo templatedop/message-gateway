@@ -84,7 +84,7 @@ type route[Req, Res any] struct {
 }
 
 func New[Req, Res any](method, path string, h HandlerFunc[Req, Res], ds ...int) Route {
-	return newRoute[Req, Res](method, path, build(h, ds...))
+	return newRoute[Req, Res](method, path, buildImproved(h, ds...))
 }
 
 func newRoute[Req, Res any](method, path string, h gin.HandlerFunc) Route {
@@ -123,6 +123,9 @@ type FileConsumer interface {
 	AcceptFiles(map[string][]*multipart.FileHeader) error
 }
 
+// build is the legacy request handler builder kept for backward compatibility.
+// The production code now uses buildImproved (see route_improved.go) which includes
+// sync.Pool optimizations for better performance and reduced GC pressure.
 func build[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) gin.HandlerFunc {
 	ds := http.StatusOK
 	if len(defaultStatus) == 1 {

@@ -3,8 +3,7 @@ package route
 import (
 	"reflect"
 
-
-	 "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type Meta struct {
