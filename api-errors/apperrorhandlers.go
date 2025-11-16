@@ -64,20 +64,17 @@ func HandleBindingError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	var appErr *AppError
 	if appErr, ok := Find[*AppError](err); ok {
-
-		// if errors.As(err, &appErr) {
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorBadRequest, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		return
 	}
 
-	// Check if the error is a validator.ValidationErrors.
-	// var ve validator.ValidationErrors
-	// if errors.As(err, &ve) {
-	if ve, ok := Find[validator.ValidationErrors](err); ok {
+	// Declare appErr for use in subsequent branches
+	var appErr *AppError
 
+	// Check if the error is a validator.ValidationErrors.
+	if ve, ok := Find[validator.ValidationErrors](err); ok {
 		// Create a new AppError for a binding error.
 		newAppErr := NewAppError("Binding error", strconv.Itoa(http.StatusBadRequest), err)
 		appErr = &newAppErr // Get a pointer to the newly created AppError
@@ -187,8 +184,7 @@ func HandleDBError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	var appErr *AppError
-	if errors.As(err, &appErr) {
+	if appErr, ok := Find[*AppError](err); ok {
 		statusCode, convErr := strconv.Atoi(appErr.Code)
 		if convErr != nil {
 			apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
@@ -219,8 +215,7 @@ func HandleDBError(ctx *gin.Context, err error) {
 
 	default:
 		// Check if the error is a PostgreSQL error.
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := Find[*pgconn.PgError](err); ok {
 			// Map PostgreSQL error codes to custom dbError codes and messages.
 			switch {
 
@@ -311,11 +306,8 @@ func HandleError(ctx *gin.Context, err error) {
 		return
 	}
 
-	// Initialize a variable for the appError to store the error details.
-	var appErr *AppError
-
 	// Check if the error is of type AppError.
-	if errors.As(err, &appErr) {
+	if appErr, ok := Find[*AppError](err); ok {
 		// Create a structured HTTP response using the AppError.
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
@@ -348,12 +340,8 @@ func HandleErrorWithCustomMessage(ctx *gin.Context, message string, err error) {
 		return
 	}
 
-	// Initialize a variable for the appError to store the error details.
-	// var appErr *AppError
+	// Check if the error is of type AppError.
 	if appErr, ok := Find[*AppError](err); ok {
-		// }
-		// Check if the error is of type AppError.
-		// if errors.As(err, &appErr) {
 		// Create a structured HTTP response using the AppError.
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
@@ -674,10 +662,7 @@ func checkDBError(err error) APIErrorResponse {
 
 	default:
 		// Check if the error is a PostgreSQL error.
-		// var pgErr *pgconn.PgError
 		if pgErr, ok := Find[*pgconn.PgError](err); ok {
-			// }
-			// if errors.As(err, &pgErr) {
 			// Map PostgreSQL error codes to custom dbError codes and messages.
 			switch {
 
@@ -760,11 +745,7 @@ func HandleCommonError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	// var appErr *AppError
 	if appErr, ok := Find[*AppError](err); ok {
-		// }
-		// if errors.As(err, &appErr) {
-
 		if len(appErr.FieldErrors) > 0 {
 			HandleValidationError(ctx, err)
 			return
