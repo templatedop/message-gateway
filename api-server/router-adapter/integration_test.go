@@ -10,9 +10,8 @@ import (
 	"MgApplication/api-server/router-adapter"
 
 	// Import all adapter packages to trigger their init() functions
-	// NOTE: Echo and Fiber commented out due to missing dependencies in test environment
-	// _ "MgApplication/api-server/router-adapter/echo"
-	// _ "MgApplication/api-server/router-adapter/fiber"
+	_ "MgApplication/api-server/router-adapter/echo"
+	_ "MgApplication/api-server/router-adapter/fiber"
 	_ "MgApplication/api-server/router-adapter/gin"
 	_ "MgApplication/api-server/router-adapter/nethttp"
 )

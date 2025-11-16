@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -176,19 +177,13 @@ func (a *FiberAdapter) RegisterGroup(prefix string, middlewares []routeradapter.
 
 // UseNative adds a Fiber-specific middleware to the router
 func (a *FiberAdapter) UseNative(middleware interface{}) error {
-	var fiberMiddleware fiber.Handler
-
 	switch mw := middleware.(type) {
-	case fiber.Handler:
-		fiberMiddleware = mw
 	case func(*fiber.Ctx) error:
-		fiberMiddleware = fiber.Handler(mw)
+		a.app.Use(mw)
+		return nil
 	default:
-		return fmt.Errorf("middleware must be fiber.Handler or func(*fiber.Ctx) error, got %T", middleware)
+		return fmt.Errorf("middleware must be func(*fiber.Ctx) error, got %T", middleware)
 	}
-
-	a.app.Use(fiberMiddleware)
-	return nil
 }
 
 // ServeHTTP implements http.Handler interface
@@ -270,10 +265,22 @@ func (a *FiberAdapter) convertGinHandlerToFiber(ginHandler interface{}) fiber.Ha
 // fiberContextToRouterContext converts Fiber context to RouterContext
 func (a *FiberAdapter) fiberContextToRouterContext(c *fiber.Ctx) *routeradapter.RouterContext {
 	// Create standard http.Request and http.ResponseWriter
-	// Fiber provides these via fasthttp conversion
+	// Fiber uses fasthttp, so we need to convert
+	uri := c.Request().URI()
+	urlStr := string(uri.RequestURI())
+	if urlStr == "" {
+		urlStr = "/"
+	}
+
+	// Parse URL
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		parsedURL = &url.URL{Path: urlStr}
+	}
+
 	req := &http.Request{
 		Method: c.Method(),
-		URL:    c.Request().URI().URL(),
+		URL:    parsedURL,
 		Header: make(http.Header),
 	}
 
@@ -396,17 +403,11 @@ func (g *FiberGroup) Group(prefix string, middlewares ...routeradapter.Middlewar
 
 // UseNative adds a Fiber-specific middleware to this group
 func (g *FiberGroup) UseNative(middleware interface{}) error {
-	var fiberMiddleware fiber.Handler
-
 	switch mw := middleware.(type) {
-	case fiber.Handler:
-		fiberMiddleware = mw
 	case func(*fiber.Ctx) error:
-		fiberMiddleware = fiber.Handler(mw)
+		g.group.Use(mw)
+		return nil
 	default:
-		return fmt.Errorf("middleware must be fiber.Handler or func(*fiber.Ctx) error, got %T", middleware)
+		return fmt.Errorf("middleware must be func(*fiber.Ctx) error, got %T", middleware)
 	}
-
-	g.group.Use(fiberMiddleware)
-	return nil
 }

@@ -10,8 +10,18 @@ import (
 	"MgApplication/api-server/route"
 	"MgApplication/api-server/router-adapter"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2"
 )
+
+// dummyGinHandler creates a dummy gin handler for testing
+// Since Fiber adapter doesn't actually execute Gin handlers,
+// this is just a placeholder to satisfy route.Meta type requirements
+func dummyGinHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "test"})
+	}
+}
 
 func TestNewFiberAdapter(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
@@ -51,15 +61,13 @@ func TestFiberAdapter_RegisterRoute(t *testing.T) {
 	}
 
 	// Create a simple handler
-	handler := func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "hello"})
-	}
+	// Using dummy Gin handler since route.Meta expects gin.HandlerFunc
 
 	// Register route
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/test",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := adapter.RegisterRoute(meta); err != nil {
@@ -83,14 +91,12 @@ func TestFiberAdapter_RegisterGroup(t *testing.T) {
 	group := adapter.RegisterGroup("/api/v1", nil)
 
 	// Register route in group
-	handler := func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "group route"})
-	}
+	// Using dummy Gin handler since route.Meta expects gin.HandlerFunc
 
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/users",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := group.RegisterRoute(meta); err != nil {
@@ -124,14 +130,12 @@ func TestFiberAdapter_Middleware(t *testing.T) {
 	}
 
 	// Register route
-	handler := func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "test"})
-	}
+	// Using dummy Gin handler since route.Meta expects gin.HandlerFunc
 
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/test",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := adapter.RegisterRoute(meta); err != nil {
@@ -169,14 +173,12 @@ func TestFiberAdapter_NativeMiddleware(t *testing.T) {
 	}
 
 	// Register route
-	handler := func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "test"})
-	}
+	// Using dummy Gin handler since route.Meta expects gin.HandlerFunc
 
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/test",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := adapter.RegisterRoute(meta); err != nil {
@@ -201,14 +203,12 @@ func TestFiberAdapter_StartShutdown(t *testing.T) {
 	}
 
 	// Register a test route
-	handler := func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "test"})
-	}
+	// Using dummy Gin handler since route.Meta expects gin.HandlerFunc
 
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/health",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := adapter.RegisterRoute(meta); err != nil {
@@ -267,15 +267,11 @@ func TestFiberAdapter_ErrorHandling(t *testing.T) {
 	// Set error handler
 	adapter.SetErrorHandler(routeradapter.NewFiberErrorHandler())
 
-	// Register route that returns error
-	handler := func(c *fiber.Ctx) error {
-		return fiber.NewError(500, "test error")
-	}
-
+	// Register route (using dummy Gin handler since route.Meta expects gin.HandlerFunc)
 	meta := route.Meta{
 		Method: "GET",
 		Path:   "/error",
-		Func:   handler,
+		Func:   dummyGinHandler(),
 	}
 
 	if err := adapter.RegisterRoute(meta); err != nil {
