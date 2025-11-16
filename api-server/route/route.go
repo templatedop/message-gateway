@@ -33,59 +33,39 @@ type Context struct {
 	Log    *log.Logger
 }
 
-// Deadline implements context.Context.
+// Deadline implements context.Context by delegating to the underlying context.
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
-	panic("unimplemented")
+	return c.Ctx.Deadline()
 }
 
-// Done implements context.Context.
+// Done implements context.Context by delegating to the underlying context.
 func (c *Context) Done() <-chan struct{} {
-	panic("unimplemented")
+	return c.Ctx.Done()
 }
 
-// Err implements context.Context.
+// Err implements context.Context by delegating to the underlying context.
 func (c *Context) Err() error {
-	panic("unimplemented")
+	return c.Ctx.Err()
 }
 
-// Value implements context.Context.
+// Value implements context.Context by delegating to the underlying context.
 func (c *Context) Value(key any) any {
-	panic("unimplemented")
+	return c.Ctx.Value(key)
 }
 
 func (c *Context) fromGinCtx(ginCtx *gin.Context) {
 	cc := ginCtx.Request.Context()
-	// if logger, ok := cc.Value(cnst.LoggerContextKey).(*log.Logger); ok {
-	// 	c.Log = logger
-	// }
-	// ctx := context.Background()
-	// if requestID, ok := cc.Value(cnst.RequestIDContextKey).(string); ok {
-	// 	cc = context.WithValue(cc, cnst.RequestIDContextKey, requestID)
-	// }
-	// Safely fetch timeout value; middleware may not have set it.
-	defaultTimeoutSeconds := 50 // sensible default
-	var timeoutSeconds = defaultTimeoutSeconds
-	// if v := cc.Value(middlewares.ServerTimeOutKey); v != nil {
-	// 	switch tv := v.(type) {
-	// 	case int:
-	// 		if tv > 0 {
-	// 			timeoutSeconds = tv
-	// 		}
-	// 	case int64:
-	// 		if tv > 0 {
-	// 			timeoutSeconds = int(tv)
-	// 		}
-	// 	case time.Duration:
-	// 		if tv > 0 {
-	// 			timeoutSeconds = int(tv / time.Second)
-	// 		}
-	// 	}
-	// }
-	ctxtimeout, cancel := context.WithTimeout(cc, time.Duration(timeoutSeconds)*time.Second)
-	c.Ctx = ctxtimeout
+
+	// Use the existing request context which may already have timeout, tracing, etc.
+	// from middlewares. Don't create a new timeout context here to avoid conflicts.
+	// If timeout middleware is enabled, it already set up the timeout.
+	// We just need a cancel context to allow early cancellation if needed.
+	ctx, cancel := context.WithCancel(cc)
+	c.Ctx = ctx
 	c.cancel = cancel
-	// Propagate the timeout context downstream.
-	ginCtx.Request = ginCtx.Request.WithContext(ctxtimeout)
+
+	// Don't replace ginCtx.Request.Context() as it may contain values from middlewares
+	// The handler will use c.Ctx for operations and ginCtx.Request.Context() is already set
 }
 
 type NoParam = typlect.NoParam
@@ -179,9 +159,21 @@ func build[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) gin.Hand
 			if c.Request.Method != http.MethodGet && c.Request.Body != nil {
 				rawCT := c.GetHeader("Content-Type")
 
+				// Require Content-Type header for non-GET requests with body
+				if rawCT == "" {
+					msg := "Content-Type header is required for requests with body"
+					codeAndMsg := apierrors.NewHTTPStatsuCodeAndMessage(http.StatusBadRequest, msg)
+					apierrors.ErrorResponseWithStatusCodeAndMessage(c, codeAndMsg, msg, nil)
+					return
+				}
+
 				mediaType, _, err := mime.ParseMediaType(rawCT)
-				if err != nil { // fallback if parse fails
-					mediaType = rawCT
+				if err != nil {
+					msg := "Invalid Content-Type header"
+					codeAndMsg := apierrors.NewHTTPStatsuCodeAndMessage(http.StatusBadRequest, msg)
+					apierrors.ErrorResponseWithStatusCodeAndMessage(c, codeAndMsg,
+						fmt.Sprintf("Failed to parse Content-Type '%s': %v", rawCT, err), err)
+					return
 				}
 				mediaType = strings.ToLower(mediaType)
 				if mediaType != "" { // proceed only if client declared a content type
@@ -251,17 +243,13 @@ func build[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) gin.Hand
 						}
 					default:
 						// Provide a unified unsupported content type message listing allowed types
-						supported := []string{"application/json", "application/xml", "application/x-www-form-urlencoded", "multipart/form-data"}
+						supported := []string{"application/json", "application/xml", "application/x-www-form-urlencoded", "multipart/form-data", "text/plain", "application/yaml"}
 						err := fmt.Errorf("unsupported content type '%s'. Supported: %s", mediaType, strings.Join(supported, ", "))
 						msg := "Unsupported content type"
 						codeAndMsg := apierrors.NewHTTPStatsuCodeAndMessage(http.StatusUnsupportedMediaType, msg)
 						apierrors.ErrorResponseWithStatusCodeAndMessage(c, codeAndMsg, err.Error(), err)
 						return
 					}
-				} else {
-					// Handle empty content type
-					apierrors.ErrorResponseWithStatusCodeAndMessage(c, apierrors.NewHTTPStatsuCodeAndMessage(http.StatusUnsupportedMediaType, "Content-Type header is required"), "missing content-type", nil)
-					return
 				}
 
 			}
@@ -314,22 +302,35 @@ func handleResponse(c *gin.Context, res any, ds int) {
 			// Stream if implementation provides a Stream method
 			if streamer, ok2 := any(res).(response.Streamer); ok2 {
 				if err := streamer.Stream(c.Writer); err != nil {
-					c.Status(http.StatusInternalServerError)
+					log.Error(c.Request.Context(), "Failed to stream file response: %v", err)
+					// Don't send body if headers already sent
+					if !c.Writer.Written() {
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"success": false,
+							"message": "Failed to stream file",
+						})
+					}
 					return
 				}
 				c.Status(status)
 				return
 			}
-			// fallback
+			// fallback to Data method
 			c.Data(status, contentType, st.Object())
 			return
 		}
 
+		// Standard JSON response
 		c.JSON(status, res)
 		return
 	}
 
-	log.Warn(c, "response does not implement Stature interface, using defaults")
+	// Response doesn't implement Stature interface - this should be rare
+	// Log detailed warning to help identify which handler needs updating
+	log.Warn(c.Request.Context(),
+		"Response type %T does not implement Stature interface for %s %s - using default 200 OK. "+
+		"Consider wrapping response in response.Response[T] for consistent API responses",
+		res, c.Request.Method, c.Request.URL.Path)
 	c.JSON(http.StatusOK, res)
 }
 

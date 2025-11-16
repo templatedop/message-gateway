@@ -78,16 +78,22 @@ func (s *Router) handleConnState(conn net.Conn, state http.ConnState) {
 	case http.StateNew:
 		currentConns := atomic.LoadInt64(&activeConnections)
 		if currentConns >= s.MaxConnections {
+			// Increment rejected connections metric
+			IncRejectedConnections()
+
 			log.GetBaseLoggerInstance().ToZerolog().Warn().
 				Int64("activeConnections", currentConns).
 				Int64("maxConnections", s.MaxConnections).
-				Msg("Max connections reached")
+				Msg("Max connections reached - connection rejected")
 			conn.Close()
 			return
 		}
 		atomic.AddInt64(&activeConnections, 1)
+		IncActiveConnections()
+
 	case http.StateClosed, http.StateHijacked:
 		atomic.AddInt64(&activeConnections, -1)
+		DecActiveConnections()
 	}
 }
 
@@ -190,12 +196,15 @@ func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, Metr
 	app := gin.New()
 	serverCfg, err := cfg.Of("server")
 	if err != nil {
-		log.Error(nil, "Error in getting server config")
+		log.Error(nil, "Failed to get server config, using root config: %v", err)
+		serverCfg = cfg // Fallback to root config
 	}
 
 	corsCfg, err := serverCfg.Of("cors")
 	if err != nil {
-		log.Error(nil, "Error in getting cors config")
+		log.Warn(nil, "Failed to get CORS config, CORS middleware will use empty defaults: %v", err)
+		// corsCfg will be used even if err != nil, but it will return empty values
+		// This is acceptable as CORSMiddleware handles empty slices gracefully
 	}
 
 	var defaultsizelimit int64
@@ -472,6 +481,10 @@ func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, Metr
 	if r.cfg.Exists("server.maxConnections") {
 		r.MaxConnections = r.cfg.GetInt64("server.maxConnections")
 	}
+
+	// Initialize connection tracking metrics
+	InitConnectionMetrics(MetricsRegistry)
+	SetMaxConnections(r.MaxConnections)
 	if r.cfg.Exists("server.addr") {
 		r.Addr = r.cfg.GetString("server.addr")
 	} else {
