@@ -30,21 +30,23 @@ func (h *DefaultErrorHandler) HandleError(ctx *RouterContext, err error) {
 	// Determine status code and message
 	statusCode := http.StatusInternalServerError
 	message := err.Error()
+	errorCode := "internal_error"
 
-	// Check if it's an API error with status code
-	if apiErr, ok := err.(*apierrors.Error); ok {
-		if apiErr.StatusCode > 0 {
-			statusCode = apiErr.StatusCode
-		}
+	// Check if it's an API error with custom message and code
+	if apiErr, ok := err.(*apierrors.AppError); ok {
 		if apiErr.Message != "" {
 			message = apiErr.Message
+		}
+		if apiErr.Code != "" {
+			errorCode = apiErr.Code
 		}
 	}
 
 	// Send JSON error response
 	errorResponse := map[string]interface{}{
 		"error":   message,
-		"code":    statusCode,
+		"code":    errorCode,
+		"status":  statusCode,
 		"success": false,
 	}
 

@@ -2,7 +2,24 @@ package routeradapter
 
 import (
 	"fmt"
+	"sync"
 )
+
+// AdapterFactory is a function that creates a RouterAdapter from configuration
+type AdapterFactory func(*RouterConfig) (RouterAdapter, error)
+
+var (
+	adapterFactories = make(map[RouterType]AdapterFactory)
+	factoryMu        sync.RWMutex
+)
+
+// RegisterAdapterFactory registers a factory function for a router type
+// This allows adapter implementations to register themselves
+func RegisterAdapterFactory(routerType RouterType, factory AdapterFactory) {
+	factoryMu.Lock()
+	defer factoryMu.Unlock()
+	adapterFactories[routerType] = factory
+}
 
 // NewRouterAdapter creates a new RouterAdapter based on the provided configuration
 // This is the factory function that selects and instantiates the appropriate adapter
@@ -23,24 +40,22 @@ func NewRouterAdapter(cfg *RouterConfig) (RouterAdapter, error) {
 		return nil, fmt.Errorf("invalid router config: %w", err)
 	}
 
-	// Create adapter based on type
-	switch cfg.Type {
-	case RouterTypeGin, "":
-		// Gin is the default framework
-		return NewGinAdapter(cfg)
-
-	case RouterTypeFiber:
-		return NewFiberAdapter(cfg)
-
-	case RouterTypeEcho:
-		return NewEchoAdapter(cfg)
-
-	case RouterTypeNetHTTP:
-		return NewNetHTTPAdapter(cfg)
-
-	default:
-		return nil, fmt.Errorf("unsupported router type: %s", cfg.Type)
+	// Default to Gin if not specified
+	if cfg.Type == "" {
+		cfg.Type = RouterTypeGin
 	}
+
+	// Get factory for router type
+	factoryMu.RLock()
+	factory, exists := adapterFactories[cfg.Type]
+	factoryMu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("no adapter registered for router type: %s", cfg.Type)
+	}
+
+	// Create adapter
+	return factory(cfg)
 }
 
 // MustNewRouterAdapter is like NewRouterAdapter but panics on error
@@ -62,31 +77,15 @@ func NewRouterAdapterFromType(routerType RouterType) (RouterAdapter, error) {
 	return NewRouterAdapter(cfg)
 }
 
-// Adapter factory functions
-// These are implemented in separate files for each framework
+// GetRegisteredAdapters returns a list of registered adapter types
+// Useful for debugging and displaying available options
+func GetRegisteredAdapters() []RouterType {
+	factoryMu.RLock()
+	defer factoryMu.RUnlock()
 
-// NewGinAdapter creates a new Gin router adapter
-// Implemented in gin/adapter.go
-func NewGinAdapter(cfg *RouterConfig) (RouterAdapter, error) {
-	// Import guard: prevent circular dependency
-	// Actual implementation is in gin/adapter.go
-	return nil, fmt.Errorf("gin adapter not yet implemented - see gin/adapter.go")
-}
-
-// NewFiberAdapter creates a new Fiber router adapter
-// Implemented in fiber/adapter.go
-func NewFiberAdapter(cfg *RouterConfig) (RouterAdapter, error) {
-	return nil, fmt.Errorf("fiber adapter not yet implemented - see fiber/adapter.go")
-}
-
-// NewEchoAdapter creates a new Echo router adapter
-// Implemented in echo/adapter.go
-func NewEchoAdapter(cfg *RouterConfig) (RouterAdapter, error) {
-	return nil, fmt.Errorf("echo adapter not yet implemented - see echo/adapter.go")
-}
-
-// NewNetHTTPAdapter creates a new net/http router adapter
-// Implemented in nethttp/adapter.go
-func NewNetHTTPAdapter(cfg *RouterConfig) (RouterAdapter, error) {
-	return nil, fmt.Errorf("nethttp adapter not yet implemented - see nethttp/adapter.go")
+	adapters := make([]RouterType, 0, len(adapterFactories))
+	for routerType := range adapterFactories {
+		adapters = append(adapters, routerType)
+	}
+	return adapters
 }
