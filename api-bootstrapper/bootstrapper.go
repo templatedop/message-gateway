@@ -53,7 +53,8 @@ func New() *Bootstrapper {
 			fxconfig,
 			fxlog,
 			fxDB,
-			fxrouter,
+			fxRouterAdapter, // Router adapter system - supports gin, fiber, echo, nethttp
+			// fxrouter,      // Old router module (Gin only) - kept for backward compatibility
 			fxTrace,
 			fxMetrics,
 			//fxHealthcheck,
@@ -527,8 +528,7 @@ func newRouterAdapter(p routerAdapterParams) (routeradapter.RouterAdapter, error
 	// Set the signal-aware context
 	adapter.SetContext(p.Ctx)
 
-	// TODO: Register routes, middlewares, etc.
-	// This would integrate with your existing route registration system
+	// Note: Routes and middlewares will be registered from the application layer
 
 	return adapter, nil
 }
