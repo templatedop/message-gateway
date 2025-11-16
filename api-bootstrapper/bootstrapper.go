@@ -23,6 +23,7 @@ import (
 	otelsdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	router "MgApplication/api-server"
+	routeradapter "MgApplication/api-server/router-adapter"
 
 	tclient "go.temporal.io/sdk/client"
 	"go.uber.org/fx"
@@ -472,6 +473,115 @@ func startServer(lc fx.Lifecycle, sv *router.Router) {
 		return nil
 	})
 
+}
+
+// fxRouterAdapter is the new FX module that uses router-adapter system
+// This allows switching between different web frameworks (Gin, Fiber, Echo, net/http)
+// via configuration instead of being hard-coded to Gin
+var fxRouterAdapter = fx.Module(
+	"router-adapter",
+	fx.Provide(
+		newRouterAdapter,
+	),
+	fx.Invoke(startRouterAdapter),
+)
+
+// routerAdapterParams holds the dependencies for creating a router adapter
+type routerAdapterParams struct {
+	fx.In
+	Ctx      context.Context
+	Config   *config.Config
+	Osdktrace *otelsdktrace.TracerProvider
+	Registry *prometheus.Registry
+}
+
+// newRouterAdapter creates and configures a router adapter from config
+func newRouterAdapter(p routerAdapterParams) (routeradapter.RouterAdapter, error) {
+	// Import adapter packages to register factories
+	_ "MgApplication/api-server/router-adapter/gin"
+	_ "MgApplication/api-server/router-adapter/fiber"
+	_ "MgApplication/api-server/router-adapter/echo"
+	_ "MgApplication/api-server/router-adapter/nethttp"
+
+	// Create router config from application config
+	cfg := routeradapter.DefaultRouterConfig()
+
+	// Determine router type from config (default to Gin)
+	routerType := routeradapter.RouterTypeGin
+	if p.Config.Exists("router.type") {
+		routerType = routeradapter.RouterType(p.Config.GetString("router.type"))
+	}
+	cfg.Type = routerType
+
+	// Set server configuration
+	if p.Config.Exists("server.addr") {
+		cfg.Port = p.Config.GetInt("server.port")
+	}
+
+	// Create the adapter
+	adapter, err := routeradapter.NewRouterAdapter(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the signal-aware context
+	adapter.SetContext(p.Ctx)
+
+	// TODO: Register routes, middlewares, etc.
+	// This would integrate with your existing route registration system
+
+	return adapter, nil
+}
+
+// routerAdapterLifecycleParams holds dependencies for router adapter lifecycle
+type routerAdapterLifecycleParams struct {
+	fx.In
+	LC      fx.Lifecycle
+	Adapter routeradapter.RouterAdapter
+	Config  *config.Config
+}
+
+// startRouterAdapter manages the router adapter lifecycle
+func startRouterAdapter(p routerAdapterLifecycleParams) {
+	eg, _ := errgroup.WithContext(context.Background())
+
+	p.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			// Get server address from config
+			addr := ":8080"
+			if p.Config.Exists("server.addr") {
+				addr = p.Config.GetString("server.addr")
+			}
+
+			// Start server in background
+			eg.Go(func() error {
+				if err := p.Adapter.Start(addr); err != nil && err != http.ErrServerClosed {
+					return err
+				}
+				return nil
+			})
+
+			log.GetBaseLoggerInstance().ToZerolog().Info().
+				Str("adapter", string(p.Config.GetString("router.type"))).
+				Str("address", addr).
+				Msg("Router adapter started")
+
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			if err := p.Adapter.Shutdown(shutdownCtx); err != nil {
+				return err
+			}
+
+			log.GetBaseLoggerInstance().ToZerolog().Info().
+				Msg("Router adapter shutdown complete")
+
+			return nil
+		},
+	})
 }
 
 type FxMinioParam struct {

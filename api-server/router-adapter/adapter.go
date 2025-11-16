@@ -58,6 +58,11 @@ type RouterAdapter interface {
 	// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
 	// Called when a route exists but doesn't support the HTTP method
 	SetNoMethodHandler(handler HandlerFunc)
+
+	// SetContext sets the signal-aware context for the router
+	// This context will be propagated to all HTTP request handlers via http.Server.BaseContext
+	// Allows handlers to detect shutdown signals and gracefully terminate
+	SetContext(ctx context.Context)
 }
 
 // RouterGroup represents a group of routes with a common prefix and middlewares

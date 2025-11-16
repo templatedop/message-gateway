@@ -28,6 +28,7 @@ type FiberAdapter struct {
 	app          *fiber.App
 	config       *routeradapter.RouterConfig
 	errorHandler routeradapter.ErrorHandler
+	ctx          context.Context // Signal-aware application context
 	mu           sync.RWMutex
 }
 
@@ -227,6 +228,23 @@ func (a *FiberAdapter) Shutdown(ctx context.Context) error {
 // Note: Fiber manages its own server, so this returns nil
 func (a *FiberAdapter) Server() *http.Server {
 	return nil // Fiber manages its own server internally
+}
+
+// SetContext sets the signal-aware context for the router
+// This context will be propagated to all HTTP handlers via middleware
+func (a *FiberAdapter) SetContext(ctx context.Context) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.ctx = ctx
+
+	// Add middleware to set user context for all requests
+	// This must be registered early in the middleware chain
+	a.app.Use(func(c *fiber.Ctx) error {
+		if a.ctx != nil {
+			c.SetUserContext(a.ctx)
+		}
+		return c.Next()
+	})
 }
 
 // SetErrorHandler sets custom error handler for the router
