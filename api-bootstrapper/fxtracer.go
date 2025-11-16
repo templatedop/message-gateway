@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -81,6 +82,13 @@ func NewFxTracerProvider(param FxTraceParam) (*otelsdktrace.TracerProvider, erro
 	if err != nil {
 		return nil, err
 	}
+
+	// Set as global trace provider to ensure context propagation works
+	// This is CRITICAL for distributed tracing:
+	// - All libraries using otel.GetTracerProvider() will get this provider
+	// - Ensures parent-child span relationships across boundaries (HTTP -> DB)
+	// - Enables trace context propagation through pgx database operations
+	otel.SetTracerProvider(tracerProvider)
 
 	param.LifeCycle.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
