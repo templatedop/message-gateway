@@ -15,8 +15,6 @@ import (
 
 	"github.com/arl/statsviz"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/goccy/go-json"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -152,27 +150,6 @@ func NewRouter(app *gin.Engine, cfg *config.Config, registries []*registry) *Rou
 		cfg:        cfg,
 		registries: registries,
 	}
-}
-
-// CustomJSONBinding uses goccy/go-json for high-performance JSON encoding/decoding
-// goccy/go-json provides 2-8x better performance compared to encoding/json in this environment
-// while maintaining 100% compatibility. See JSON_LIBRARY_ANALYSIS.md for detailed benchmarks.
-type CustomJSONBinding struct{}
-
-func (CustomJSONBinding) Name() string {
-	return "json"
-}
-
-func (CustomJSONBinding) Bind(req *http.Request, obj interface{}) error {
-	if req == nil || req.Body == nil {
-		return fmt.Errorf("missing request body")
-	}
-	decoder := json.NewDecoder(req.Body)
-	return decoder.Decode(obj)
-}
-
-func (CustomJSONBinding) BindBody(body []byte, obj interface{}) error {
-	return json.Unmarshal(body, obj)
 }
 
 // ============================================================================
@@ -504,9 +481,10 @@ func createAndConfigureRouter(app *gin.Engine, cfg *config.Config,
 func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
 	// Configure Gin mode based on environment
 	configureGinMode(cfg)
-	binding.JSON = CustomJSONBinding{}
 
 	// Create Gin engine
+	// Note: Custom JSON binding with goccy/go-json is set up automatically
+	// via init() function in api-server/route/route_improved.go
 	app := gin.New()
 
 	// Register middlewares in order
