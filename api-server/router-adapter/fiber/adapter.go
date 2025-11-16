@@ -236,6 +236,75 @@ func (a *FiberAdapter) SetErrorHandler(handler routeradapter.ErrorHandler) {
 	a.mu.Unlock()
 }
 
+// SetNoRouteHandler sets the handler for 404 Not Found responses
+// Called when no route matches the request
+func (a *FiberAdapter) SetNoRouteHandler(handler routeradapter.HandlerFunc) {
+	// Fiber uses app.Use() to catch all unmatched routes
+	// This must be registered last, after all other routes
+	a.app.Use(func(c *fiber.Ctx) error {
+		// Check if a route was already matched
+		// If we're here and the route wasn't matched, it's a 404
+		if c.Route() == nil {
+			// Create RouterContext
+			rctx := a.fiberContextToRouterContext(c)
+
+			// Call custom handler
+			if err := handler(rctx); err != nil {
+				// If handler returns error, use error handler
+				a.mu.RLock()
+				errorHandler := a.errorHandler
+				a.mu.RUnlock()
+
+				if errorHandler != nil {
+					errorHandler.HandleError(rctx, err)
+				}
+				return err
+			}
+			return nil
+		}
+
+		return c.Next()
+	})
+}
+
+// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
+// Called when a route exists but doesn't support the HTTP method
+func (a *FiberAdapter) SetNoMethodHandler(handler routeradapter.HandlerFunc) {
+	// Fiber doesn't have a built-in way to distinguish between 404 and 405
+	// We can use custom middleware to detect method mismatches
+	a.app.Use(func(c *fiber.Ctx) error {
+		// First check if route exists
+		route := c.Route()
+		if route == nil {
+			// No route found, this will be handled by NoRoute
+			return c.Next()
+		}
+
+		// Check if method matches
+		// Fiber's route.Method contains the allowed method
+		if route.Method != c.Method() {
+			// Method not allowed
+			rctx := a.fiberContextToRouterContext(c)
+
+			// Call custom handler
+			if err := handler(rctx); err != nil {
+				// If handler returns error, use error handler
+				a.mu.RLock()
+				errorHandler := a.errorHandler
+				a.mu.RUnlock()
+
+				if errorHandler != nil {
+					errorHandler.HandleError(rctx, err)
+				}
+				return err
+			}
+			return nil
+		}
+
+		return c.Next()
+	})
+}
+
 // convertMiddleware converts framework-agnostic middleware to Fiber middleware
 func (a *FiberAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc) fiber.Handler {
 	return func(c *fiber.Ctx) error {

@@ -22,13 +22,15 @@ func init() {
 // NetHTTPAdapter implements RouterAdapter interface for standard library net/http
 // This adapter implements its own routing with path parameter support
 type NetHTTPAdapter struct {
-	mux          *http.ServeMux
-	router       *Router
-	server       *http.Server
-	config       *routeradapter.RouterConfig
-	errorHandler routeradapter.ErrorHandler
-	middlewares  []routeradapter.MiddlewareFunc
-	mu           sync.RWMutex
+	mux              *http.ServeMux
+	router           *Router
+	server           *http.Server
+	config           *routeradapter.RouterConfig
+	errorHandler     routeradapter.ErrorHandler
+	noRouteHandler   routeradapter.HandlerFunc
+	noMethodHandler  routeradapter.HandlerFunc
+	middlewares      []routeradapter.MiddlewareFunc
+	mu               sync.RWMutex
 }
 
 // NewNetHTTPAdapter creates a new net/http router adapter
@@ -161,8 +163,53 @@ func (a *NetHTTPAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// No route found
-	http.NotFound(w, r)
+	// No route found for this method, check if route exists for other methods
+	methodMismatch := a.router.PathExists(r.URL.Path)
+
+	if methodMismatch {
+		// Route exists but method not allowed (405)
+		a.mu.RLock()
+		noMethodHandler := a.noMethodHandler
+		a.mu.RUnlock()
+
+		if noMethodHandler != nil {
+			rctx := routeradapter.NewRouterContext(w, r)
+			if err := noMethodHandler(rctx); err != nil {
+				a.mu.RLock()
+				errorHandler := a.errorHandler
+				a.mu.RUnlock()
+
+				if errorHandler != nil {
+					errorHandler.HandleError(rctx, err)
+				}
+			}
+		} else {
+			// Default 405 response
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+		return
+	}
+
+	// No route found at all (404)
+	a.mu.RLock()
+	noRouteHandler := a.noRouteHandler
+	a.mu.RUnlock()
+
+	if noRouteHandler != nil {
+		rctx := routeradapter.NewRouterContext(w, r)
+		if err := noRouteHandler(rctx); err != nil {
+			a.mu.RLock()
+			errorHandler := a.errorHandler
+			a.mu.RUnlock()
+
+			if errorHandler != nil {
+				errorHandler.HandleError(rctx, err)
+			}
+		}
+	} else {
+		// Default 404 response
+		http.NotFound(w, r)
+	}
 }
 
 // Start starts the HTTP server
@@ -235,6 +282,22 @@ func (a *NetHTTPAdapter) Server() *http.Server {
 func (a *NetHTTPAdapter) SetErrorHandler(handler routeradapter.ErrorHandler) {
 	a.mu.Lock()
 	a.errorHandler = handler
+	a.mu.Unlock()
+}
+
+// SetNoRouteHandler sets the handler for 404 Not Found responses
+// Called when no route matches the request
+func (a *NetHTTPAdapter) SetNoRouteHandler(handler routeradapter.HandlerFunc) {
+	a.mu.Lock()
+	a.noRouteHandler = handler
+	a.mu.Unlock()
+}
+
+// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
+// Called when a route exists but doesn't support the HTTP method
+func (a *NetHTTPAdapter) SetNoMethodHandler(handler routeradapter.HandlerFunc) {
+	a.mu.Lock()
+	a.noMethodHandler = handler
 	a.mu.Unlock()
 }
 
@@ -369,6 +432,24 @@ func (r *Router) Match(method, path string) (func(http.ResponseWriter, *http.Req
 	}
 
 	return nil, nil
+}
+
+// PathExists checks if a route exists for the given path (regardless of method)
+// Used to distinguish between 404 (path not found) and 405 (method not allowed)
+func (r *Router) PathExists(path string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Check all methods to see if any route matches this path
+	for _, routes := range r.routes {
+		for _, route := range routes {
+			if route.Pattern.MatchString(path) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // pathToRegex converts a path pattern like "/users/:id" to a regex

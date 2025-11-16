@@ -280,6 +280,48 @@ func (a *GinAdapter) SetErrorHandler(handler routeradapter.ErrorHandler) {
 	})
 }
 
+// SetNoRouteHandler sets the handler for 404 Not Found responses
+// Called when no route matches the request
+func (a *GinAdapter) SetNoRouteHandler(handler routeradapter.HandlerFunc) {
+	a.engine.NoRoute(func(c *gin.Context) {
+		// Create RouterContext for handler
+		rctx := a.ginContextToRouterContext(c)
+
+		// Call the custom handler
+		if err := handler(rctx); err != nil {
+			// If handler returns error, use error handler
+			a.mu.RLock()
+			errorHandler := a.errorHandler
+			a.mu.RUnlock()
+
+			if errorHandler != nil {
+				errorHandler.HandleError(rctx, err)
+			}
+		}
+	})
+}
+
+// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
+// Called when a route exists but doesn't support the HTTP method
+func (a *GinAdapter) SetNoMethodHandler(handler routeradapter.HandlerFunc) {
+	a.engine.NoMethod(func(c *gin.Context) {
+		// Create RouterContext for handler
+		rctx := a.ginContextToRouterContext(c)
+
+		// Call the custom handler
+		if err := handler(rctx); err != nil {
+			// If handler returns error, use error handler
+			a.mu.RLock()
+			errorHandler := a.errorHandler
+			a.mu.RUnlock()
+
+			if errorHandler != nil {
+				errorHandler.HandleError(rctx, err)
+			}
+		}
+	})
+}
+
 // convertMiddleware converts framework-agnostic middleware to Gin middleware
 func (a *GinAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {

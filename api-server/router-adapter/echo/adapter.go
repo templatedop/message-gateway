@@ -241,6 +241,70 @@ func (a *EchoAdapter) SetErrorHandler(handler routeradapter.ErrorHandler) {
 	a.setupErrorHandler()
 }
 
+// SetNoRouteHandler sets the handler for 404 Not Found responses
+// Called when no route matches the request
+func (a *EchoAdapter) SetNoRouteHandler(handler routeradapter.HandlerFunc) {
+	// Echo uses a special route handler for 404
+	// We add a catch-all route at the end
+	a.echo.RouteNotFound("/*", func(c echo.Context) error {
+		// Create RouterContext
+		rctx := a.echoContextToRouterContext(c)
+
+		// Call custom handler
+		if err := handler(rctx); err != nil {
+			// If handler returns error, use error handler
+			a.mu.RLock()
+			errorHandler := a.errorHandler
+			a.mu.RUnlock()
+
+			if errorHandler != nil {
+				errorHandler.HandleError(rctx, err)
+			}
+			return err
+		}
+		return nil
+	})
+}
+
+// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
+// Called when a route exists but doesn't support the HTTP method
+func (a *EchoAdapter) SetNoMethodHandler(handler routeradapter.HandlerFunc) {
+	// Echo uses middleware to detect method mismatches
+	// We add a middleware that runs before route matching
+	a.echo.Pre(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Try to execute the next handler
+			err := next(c)
+
+			// Check if the error is a method not allowed error
+			if err != nil {
+				if httpErr, ok := err.(*echo.HTTPError); ok {
+					if httpErr.Code == http.StatusMethodNotAllowed {
+						// Method not allowed
+						rctx := a.echoContextToRouterContext(c)
+
+						// Call custom handler
+						if handlerErr := handler(rctx); handlerErr != nil {
+							// If handler returns error, use error handler
+							a.mu.RLock()
+							errorHandler := a.errorHandler
+							a.mu.RUnlock()
+
+							if errorHandler != nil {
+								errorHandler.HandleError(rctx, handlerErr)
+							}
+							return handlerErr
+						}
+						return nil
+					}
+				}
+			}
+
+			return err
+		}
+	})
+}
+
 // convertMiddleware converts framework-agnostic middleware to Echo middleware
 func (a *EchoAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

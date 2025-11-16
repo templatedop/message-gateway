@@ -50,6 +50,14 @@ type RouterAdapter interface {
 	// SetErrorHandler sets custom error handler for the router
 	// Different frameworks handle errors differently (middleware vs centralized)
 	SetErrorHandler(handler ErrorHandler)
+
+	// SetNoRouteHandler sets the handler for 404 Not Found responses
+	// Called when no route matches the request
+	SetNoRouteHandler(handler HandlerFunc)
+
+	// SetNoMethodHandler sets the handler for 405 Method Not Allowed responses
+	// Called when a route exists but doesn't support the HTTP method
+	SetNoMethodHandler(handler HandlerFunc)
 }
 
 // RouterGroup represents a group of routes with a common prefix and middlewares
