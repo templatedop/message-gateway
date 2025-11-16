@@ -239,6 +239,28 @@ func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, Metr
 		encryptenabled = cfg.GetBool("server.encrypt")
 	}
 
+	// Enable gzip compression if configured
+	gzipEnabled := true // Default to enabled
+	if cfg.Exists("server.gzip.enabled") {
+		gzipEnabled = cfg.GetBool("server.gzip.enabled")
+	}
+
+	if gzipEnabled {
+		gzipConfig := middlewares.DefaultGzipConfig()
+
+		// Allow custom compression level from config
+		if cfg.Exists("server.gzip.level") {
+			gzipConfig.CompressionLevel = cfg.GetInt("server.gzip.level")
+		}
+
+		// Allow custom minimum size from config
+		if cfg.Exists("server.gzip.minsize") {
+			gzipConfig.MinSize = cfg.GetInt("server.gzip.minsize")
+		}
+
+		app.Use(middlewares.GzipWithConfig(gzipConfig))
+	}
+
 	app.Use(
 		middlewares.CORSMiddleware(corsCfg),
 		middlewares.Recover(cfg),
