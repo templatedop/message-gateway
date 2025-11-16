@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"embed"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
