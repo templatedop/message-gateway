@@ -28,6 +28,43 @@ type Response[T any] struct {
 
 	// ValidationErrors []validation.FieldError `json:"validationErrors,omitempty"`
 	Errors []Errors `json:"errors,omitempty"`
+
+	// Internal fields for response handling
+	status int // HTTP status code
+}
+
+// Status implements Stature interface
+func (r Response[T]) Status() int {
+	if r.status == 0 {
+		return 200 // Default to OK
+	}
+	return r.status
+}
+
+// GetContentType implements Stature interface
+func (r Response[T]) GetContentType() string {
+	return "application/json"
+}
+
+// GetContentDisposition implements Stature interface
+func (r Response[T]) GetContentDisposition() string {
+	return ""
+}
+
+// ResponseType implements Stature interface
+func (r Response[T]) ResponseType() string {
+	return "json"
+}
+
+// Object implements Stature interface
+func (r Response[T]) Object() []byte {
+	return nil // Not used for JSON responses
+}
+
+// WithStatus sets the HTTP status code for the response
+func (r Response[T]) WithStatus(status int) Response[T] {
+	r.status = status
+	return r
 }
 
 type Errors struct {

@@ -1,9 +1,10 @@
 package router
 
 import (
-	//"fmt"
 	"net/url"
+	"strings"
 
+	log "MgApplication/api-log"
 	"MgApplication/api-server/handler"
 	"MgApplication/api-server/route"
 	"MgApplication/api-server/swagger"
@@ -52,11 +53,24 @@ func newRegistry(ctr handler.Handler) *registry {
 }
 
 func (r *registry) parsePath(path string) string {
-	path, err := url.JoinPath(r.base, path)
+	joined, err := url.JoinPath(r.base, path)
 	if err != nil {
-		panic(err.Error())
+		// Log the error and use a fallback path construction
+		// This should rarely happen as url.JoinPath is quite tolerant
+		log.Error(nil, "Failed to join paths '%s' + '%s': %v - using fallback", r.base, path, err)
+		// Simple fallback: ensure single slash between base and path
+		if r.base == "" {
+			return path
+		}
+		if path == "" {
+			return r.base
+		}
+		// Remove trailing slash from base and leading slash from path, then join
+		base := strings.TrimRight(r.base, "/")
+		path = strings.TrimLeft(path, "/")
+		return base + "/" + path
 	}
-	return path
+	return joined
 }
 
 func (r *registry) toMeta(h route.Route) route.Meta {
