@@ -1,0 +1,74 @@
+AppName: mgSolution
+AppEnv: development
+#AppEnv: production
+
+HttpUrl: 127.0.0.1
+HttpPort: 8080
+HttpAllowedOrigins: "*"
+loglevel: debug
+#log level changed to info for load testing, set it back to debug
+#loglevel: info
+
+#DB configuration details
+DBConnection: postgres
+DBHost: 10.20.30.39
+DBPort: 5432
+DBdatabase: msggatewaydb
+DBUsername: msggateway_rw_user
+DBPassword: DoPrw@123
+
+DBQueryTimeoutLow: 2s
+DBQueryTimeoutMed: 5s
+
+#DB schema searchpath
+SearchPath : msggateway
+
+RedisServer: localhost:6379
+RedisPassword:
+
+TokenSymmetricKey: 12345678901234567890123456789012
+TokenDuration: 15m
+ShutDownTime: 10s
+ShutDowntype:
+
+# max.characters in {#var#}
+SMSvarLength: 60
+
+#CDAC Configuration
+CDACsmsURL: https://msdgweb.mgov.gov.in/esms/sendsmsrequestDLT
+CDACusername: appostsms
+CDACpassword: dop123*
+CDACsenderId: APPOST
+CDACsecureKey: c7d427c9-63e7-4eec-a227-3ef840a75269
+
+#NIC Configuration
+NICsmsURL: https://smsgw.sms.gov.in/failsafe/HttpLink
+NICusername: speedpost.sms
+NICpassword: Ao@%231234
+
+#NIC Multilingual Configuration (not working - need to check)
+NICsmsMultlingURL: https://smsgw.sms.gov.in/failsafe/MLink
+
+#NIC BulkSMS configuration
+NICbulkURL: https://smsgw.sms.gov.in/failsafe/HttpData_MM
+NICbulkUsername: speedpost.sms
+NICbulkPassword: Ao@#1234
+
+#DoP Entity Details registered with Airtel
+DltEntityID: 1001081725895192800
+NICSenderID: INPOST
+
+MSGStoreRequest: 1
+
+#MaxConns : 50
+MaxConns : 100
+MinConns : 1
+MaxConnLifetime : 120
+MaxConnIdleTime : 30
+HealthCheckPeriod : 5
+
+# Authorisation configuration
+AuthDefaultTimeout: 10s
+AuthDefaultMaxRetries: 3
+AuthDefaultRetryWait: 1s
+AuthDefaultMaxRetryWait: 3s

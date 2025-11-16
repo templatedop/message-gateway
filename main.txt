@@ -1,0 +1,202 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+
+	"go.uber.org/fx"
+
+	config "MgApplication/config"
+	"MgApplication/handler"
+	r "MgApplication/route"
+
+	authz "MgApplication/api-authz"
+	dblib "MgApplication/api-db"
+	log "MgApplication/api-log"
+)
+
+func logInit(config config.Econfig) error {
+	logFactory := log.NewDefaultLoggerFactory()
+	e := logFactory.Create(
+		log.WithServiceName(config.AppName()),
+		log.WithLevel(log.FetchLogLevel(config.LogLevel())),
+		log.WithOutputWriter(os.Stdout),
+	)
+	if e != nil {
+		return e
+	}
+	log.Info(nil, "Logger initialized successfully")
+	return nil
+}
+
+// func NewDB(c config.Econfig, lc fx.Lifecycle) (*repo.DB, error) {
+// 	ctx := context.Background()
+// 	db, err := repo.NewDB(ctx, c)
+// 	if err != nil {
+// 		log.Warn(nil, "error in db connection %s", err)
+// 		return nil, err
+// 	}
+// 	log.Info(nil, "Successfully connected to the database %s", c.DBConnection())
+
+// 	lc.Append(fx.Hook{
+// 		OnStart: func(ctx context.Context) error {
+// 			return db.Ping(ctx)
+// 		},
+// 		OnStop: func(ctx context.Context) error {
+
+// 			db.Close()
+// 			return nil
+// 		},
+// 	})
+
+// 	return db, nil
+// }
+
+func NewDB(c config.Econfig, lc fx.Lifecycle) (*dblib.DB, error) {
+	// Step 1: Initialize the DB configuration
+	dbConfig := dblib.DBConfig{
+		DBUsername: c.DBUsername(),
+		DBPassword: c.DBPassword(),
+		DBHost:     c.DBHost(),
+		DBPort:     c.DBPort(),
+		DBDatabase: c.DBDatabase(),
+		// Schema:            c.DBSchema(),
+		Schema:            c.SearchPath(),
+		MaxConns:          int32(c.MaxConns()),
+		MinConns:          int32(c.MinConns()),
+		MaxConnLifetime:   time.Duration(c.MaxConnLifetime()),   // In minutes
+		MaxConnIdleTime:   time.Duration(c.MaxConnIdleTime()),   // In minutes
+		HealthCheckPeriod: time.Duration(c.HealthCheckPeriod()), // In minutes
+		AppName:           c.AppName(),
+	}
+	// Step 2: Prepare the DB configuration (validate and set defaults)
+	preparedConfig := dblib.NewDefaultDbFactory().NewPreparedDBConfig(dbConfig)
+
+	// Step 3: Establish the database connection
+	db, err := dblib.NewDefaultDbFactory().CreateConnection(preparedConfig)
+
+	if err != nil {
+		log.Warn(nil, "error in db connection %s", err.Error())
+		return nil, err
+	}
+	log.Info(nil, "Successfully connected to the database %s", c.DBConnection())
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return db.Ping()
+		},
+		OnStop: func(ctx context.Context) error {
+
+			db.Close()
+			return nil
+		},
+	})
+
+	return db, nil
+}
+
+// func NewValidatorService() (*handler.ValidatorService, error) {
+// 	tagToNumber := handler.GetTagToNumberMap()
+// 	errordbMap := handler.GetErrordbMap()
+// 	validatorService, err := handler.NewValidatorService(tagToNumber, errordbMap)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	err = validatorService.RegisterCustomValidation("myvalidate", handler.Myvalidate, "must be equal to 10", "CST1")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	err = validatorService.RegisterCustomValidation("hourvalidate", handler.HourValidate, "Pass correct hour", "CST2")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return validatorService, nil
+// }
+
+func NewRouter(c config.Econfig, db *dblib.DB) (*handler.Router, error) {
+	router, err := r.Routes(db, c)
+	if err != nil {
+		log.Warn(nil, "Error initializing router %s", err.Error())
+		os.Exit(1)
+	}
+	return router, err
+}
+
+func NewServer(lc fx.Lifecycle, c config.Econfig, router *handler.Router) *http.Server {
+	s := &http.Server{
+		Addr:    ":" + c.HttpPort(),
+		Handler: router,
+	}
+
+	return s
+}
+
+// Swagger
+//
+//	@title			Message Gateway API
+//	@version		1.0
+//	@description	A comprehensive API for managing addresses, offering endpoints for creation, update, deletion, and retrieval of Message Gateway data
+//	@termsOfService	http://cept.gov.in/terms
+//	@contact.name	API Support Team
+//	@contact.url	http://cept.gov.in/support
+//	@contact.email	support_cept@indiapost.gov.in
+//	@license.name	Apache 2.0
+//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+//	@host			localhost:8080
+//	@BasePath		/v1
+//	@schemes		http https
+func main() {
+	c := config.Load()
+
+	//logger
+	err := logInit(c)
+	if err != nil {
+		fmt.Println("Error in log init %s", err.Error())
+	}
+
+	duration, err := time.ParseDuration(c.ShutDownTime())
+	if err != nil {
+		log.Error(nil, "Error in parsing duration: %s", err.Error())
+	}
+
+	//authz
+	err = authz.Init(authz.ClientConfig{
+		Timeout:      c.GetAuthDefaultTimeout(),
+		RetryWait:    c.GetAuthDefaultRetryWait(),
+		MaxRetryWait: c.GetAuthDefaultMaxRetryWait(),
+		MaxRetries:   c.GetAuthDefaultMaxRetries(),
+		AppName:      c.AppName(),
+	})
+
+	if err != nil {
+		log.Error(nil, "Error in initializing authz: %s", err.Error())
+	}
+
+	app := fx.New(
+		fx.Supply(c),
+		fx.Provide(NewDB, NewRouter, NewServer),
+		fx.Invoke(handler.NewValidatorService, func(lc fx.Lifecycle, server *http.Server) {
+
+			lc.Append(fx.Hook{
+				OnStart: func(context.Context) error {
+					go server.ListenAndServe()
+
+					return nil
+				},
+				OnStop: func(ctx context.Context) error {
+					handler.SetIsShuttingDown(true)
+					shutdownCtx, cancel := context.WithTimeout(ctx, duration)
+					defer cancel()
+					return server.Shutdown(shutdownCtx)
+				},
+			})
+		}),
+	)
+
+	app.Run()
+
+}

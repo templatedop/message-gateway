@@ -1,0 +1,335 @@
+func (ch *MgApplicationHandler) CreateSMSRequestHandler(ctx *gin.Context) {
+	log.Debug(ctx, "Inside CreateSMSRequestHandler function")
+	var req createSMSRequest
+	//Binding the request
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		handleBindingError(ctx, err)
+		return
+	}
+
+	//validating the request
+	if err := validation.ValidateStruct(req); err != nil {
+		handleValidationError(ctx, err)
+		return
+	}
+
+	msgreq := createMsgRequest(req, ch.c.GetString("sms.dltEntityID"))
+	log.Debug(ctx, "Entity ID is : %s", msgreq.EntityId)
+	gctx := context.Background()
+
+	if msgreq.Priority != 1 {
+		handleKafkaMessage(ctx, &gctx, ch, &msgreq)
+		return
+	}
+
+	handleMessageStore(ctx, &gctx, ch, &msgreq)
+}
+
+func handleBindingError(ctx *gin.Context, err error) {
+	log.Error(ctx, "Binding failed for CreateSMSRequestHandler: %s", err.Error())
+	apierrors.HandleBindingError(ctx, err)
+}
+
+func handleValidationError(ctx *gin.Context, err error) {
+	log.Error(ctx, "Validation failed for CreateSMSRequestHandler: %s", err.Error())
+	apierrors.HandleValidationError(ctx, err)
+}
+
+func createMsgRequest(req createSMSRequest, entityID string) domain.MsgRequest {
+	return domain.MsgRequest{
+		FacilityID:    req.FacilityID,
+		ApplicationID: req.ApplicationID,
+		Priority:      req.Priority,
+		MessageText:   req.MessageText,
+		SenderID:      req.SenderID,
+		MobileNumbers: req.MobileNumbers,
+		EntityId:      entityID,
+		TemplateID:    req.TemplateID,
+		MessageType:   req.MessageType,
+	}
+}
+
+func handleKafkaMessage(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest) {
+	resp, err := ch.svc.SendMsgToKafka(gctx, ch.c.GetString("sms.kafka.url"), ch.c.GetString("sms.kafka.schema"), msgreq)
+	if err != nil {
+		log.Error(ctx, "Error in Pushing Message to Kafka: %s", err.Error())
+		apierrors.HandleDBError(ctx, err)
+		return
+	}
+	log.Debug(ctx, "Push Data to Kafka : %s", msgreq)
+	log.Debug(ctx, "Response from Kafka is : %s", resp)
+	apiRsp := response.CreateSMSAPIResponseKafka{
+		StatusCodeAndMessage: port.CreateSuccess,
+		Data:                 resp,
+	}
+	handleCreateSuccess(ctx, apiRsp)
+}
+
+func handleMessageStore(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest) {
+	var gateway string
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	log.Debug(ctx, "Message Store Request ID is : %d", msgStoreRequest)
+
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		savedresponse, err := ch.svc.SaveMsgRequest(gctx, msgreq)
+		if err != nil {
+			log.Error(ctx, "DB Error in SaveMsgRequest: %s", err.Error())
+			apierrors.HandleDBError(ctx, err)
+			return
+		}
+		gateway = savedresponse.Gateway
+	} else {
+		savedresponse, err := ch.svc.GetGateway(gctx, msgreq)
+		if err != nil {
+			log.Error(ctx, "DB Error in GetGateway: %s", err.Error())
+			apierrors.HandleDBError(ctx, err)
+			return
+		}
+		gateway = savedresponse.Gateway
+	}
+	log.Debug(ctx, "Gateway is : %s", gateway)
+
+	handleMessageType(msgreq)
+	log.Debug(ctx, "Message Type is : %s", msgreq.MessageType)
+
+	if msgreq.Priority == 1 || msgreq.Priority == 2 {
+		handleGateway(ctx, gctx, ch, msgreq, gateway)
+	} else {
+		apiRsp := response.CreateSMSAPIResponse{
+			StatusCodeAndMessage: port.CreateSuccess,
+		}
+		handleCreateSuccess(ctx, apiRsp)
+	}
+}
+
+func handleMessageType(msgreq *domain.MsgRequest) {
+	if msgreq.MessageType == "UC" {
+		if msgreq.Gateway == "1" {
+			msgreq.MessageText = UnicodemsgConvertCDAC(msgreq.MessageText)
+		} else {
+			msgreq.MessageText = UnicodemsgConvertNIC(msgreq.MessageText)
+		}
+	} else {
+		msgreq.MessageType = "PM"
+	}
+}
+
+func handleGateway(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, gateway string) {
+	if gateway == "1" {
+		handleCDACGateway(ctx, gctx, ch, msgreq)
+	} else if gateway == "2" {
+		handleNICGateway(ctx, gctx, ch, msgreq)
+	} else {
+		apierrors.HandleWithMessage(ctx, "Invalid Gateway")
+	}
+}
+
+func handleCDACGateway(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest) {
+	rsp, err := SendSMSCDAC(SMSCDACParams{
+		Username:     ch.c.GetString("sms.cdac.username"),
+		Password:     ch.c.GetString("sms.cdac.password"),
+		Message:      msgreq.MessageText,
+		SenderID:     msgreq.SenderID,
+		MobileNumber: msgreq.MobileNumbers,
+		SecureKey:    ch.c.GetString("sms.cdac.securekey"),
+		TemplateID:   msgreq.TemplateID,
+		MessageType:  msgreq.MessageType,
+	})
+	if err != nil {
+		handleCDACError(ctx, gctx, ch, msgreq, rsp, err)
+		return
+	}
+	log.Debug(ctx, "Response from SendSMSCDAC is : %s", rsp)
+	handleCDACResponse(ctx, gctx, ch, msgreq, rsp)
+}
+
+func handleCDACError(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string, err error) {
+	msgresponse := domain.MsgResponse{
+		CommunicationID:  msgreq.CommunicationID,
+		CompleteResponse: rsp,
+		ResponseCode:     "02",
+		ResponseText:     err.Error(),
+		ReferenceID:      "",
+	}
+	_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+	apierrors.HandleError(ctx, err)
+}
+
+func handleCDACResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	SMSResponse := rsp[:5]
+	if SMSResponse == "Error" {
+		handleCDACErrorResponse(ctx, gctx, ch, msgreq, rsp)
+	} else {
+		handleCDACSuccessResponse(ctx, gctx, ch, msgreq, rsp)
+	}
+}
+
+func handleCDACErrorResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	pattern := `Error (\d+) : (.+)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(rsp)
+	if len(matches) < 3 {
+		handleInvalidResponse(ctx, gctx, ch, msgreq, rsp)
+	} else {
+		handleFormattedErrorResponse(ctx, gctx, ch, msgreq, matches)
+	}
+}
+
+func handleInvalidResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		msgresponse := domain.MsgResponse{
+			CommunicationID:  msgreq.CommunicationID,
+			CompleteResponse: rsp,
+			ResponseCode:     "400",
+			ResponseText:     "Invalid Response",
+			ReferenceID:      "",
+		}
+		_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+		apierrors.HandleWithMessage(ctx, "Invalid Response")
+	}
+}
+
+func handleFormattedErrorResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, matches []string) {
+	errorNumber := matches[1]
+	errorMessage := matches[2]
+	customError := CustomError{Message: "401, " + errorMessage}
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		msgresponse := domain.MsgResponse{
+			CommunicationID:  msgreq.CommunicationID,
+			CompleteResponse: rsp,
+			ResponseCode:     errorNumber,
+			ResponseText:     errorMessage,
+			ReferenceID:      "",
+		}
+		_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+	}
+	apierrors.HandleError(ctx, customError)
+}
+
+func handleCDACSuccessResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	pattern := `^(\d{3}),MsgID = (\d+)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(rsp)
+	if len(matches) >= 3 {
+		handleFormattedSuccessResponse(ctx, gctx, ch, msgreq, matches)
+	} else {
+		handleUnformattedSuccessResponse(ctx, gctx, ch, msgreq, rsp)
+	}
+}
+
+func handleFormattedSuccessResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, matches []string) {
+	responseCode := matches[1]
+	referenceID := matches[2]
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		msgresponse := domain.MsgResponse{
+			CommunicationID:  msgreq.CommunicationID,
+			CompleteResponse: rsp,
+			ResponseCode:     responseCode,
+			ResponseText:     "Submitted Successfully",
+			ReferenceID:      referenceID,
+		}
+		_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+		rsp := response.NewCreateSMSResponse(&msgresponse)
+		apiRsp := response.CreateSMSAPIResponse{
+			StatusCodeAndMessage: port.CreateSuccess,
+			Data:                 rsp,
+		}
+		handleCreateSuccess(ctx, apiRsp)
+	}
+}
+
+func handleUnformattedSuccessResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		msgresponse := domain.MsgResponse{
+			CommunicationID:  msgreq.CommunicationID,
+			CompleteResponse: rsp,
+			ResponseCode:     "402",
+			ResponseText:     "Submitted Successfully",
+			ReferenceID:      "",
+		}
+		_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+		rsp := response.NewCreateSMSResponse(&msgresponse)
+		apiRsp := response.CreateSMSAPIResponse{
+			StatusCodeAndMessage: port.CreateSuccess,
+			Data:                 rsp,
+		}
+		handleCreateSuccess(ctx, apiRsp)
+	}
+}
+
+func handleNICGateway(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest) {
+	var NICUsername, NICPassword string
+	switch msgreq.SenderID {
+	case "INPOST":
+		NICUsername = ch.c.GetString("sms.nic.INPOSTUserName")
+		NICPassword = ch.c.GetString("sms.nic.INPOSTPassword")
+	case "DOPBNK", "DOPCBS":
+		NICUsername = ch.c.GetString("sms.nic.DOPBNKUserName")
+		NICPassword = ch.c.GetString("sms.nic.DOPBNKPassword")
+	case "DOPPLI":
+		NICUsername = ch.c.GetString("sms.nic.DOPPLIUserName")
+		NICPassword = ch.c.GetString("sms.nic.DOPPLIPassword")
+	default:
+		log.Error(ctx, "Invalid SenderID: %s", msgreq.SenderID)
+		apierrors.HandleWithMessage(ctx, "Invalid SenderID")
+		return
+	}
+
+	rsp, err := SendSMSNIC(NICUsername, NICPassword, msgreq.MessageText, msgreq.SenderID, msgreq.MobileNumbers, msgreq.EntityId, msgreq.TemplateID, msgreq.MessageType)
+	if err != nil {
+		handleNICError(ctx, gctx, ch, msgreq, rsp, err)
+		return
+	}
+	handleNICResponse(ctx, gctx, ch, msgreq, rsp)
+}
+
+func handleNICError(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string, err error) {
+	msgresponse := domain.MsgResponse{
+		CommunicationID:  msgreq.CommunicationID,
+		CompleteResponse: rsp,
+		ResponseCode:     "02",
+		ResponseText:     err.Error(),
+		ReferenceID:      "",
+	}
+	_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+	apierrors.HandleError(ctx, err)
+}
+
+func handleNICResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, rsp string) {
+	pattern := `Request ID=(\d+)~code=([A-Z0-9]+)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(rsp)
+	if len(matches) >= 3 {
+		handleFormattedNICResponse(ctx, gctx, ch, msgreq, matches)
+	}
+}
+
+func handleFormattedNICResponse(ctx *gin.Context, gctx *context.Context, ch *MgApplicationHandler, msgreq *domain.MsgRequest, matches []string) {
+	requestID := matches[1]
+	responseCode := matches[2]
+	msgStoreRequest := ch.c.GetInt("sms.msgstorerequest")
+	if msgStoreRequest == 1 || msgreq.Priority == 3 || msgreq.Priority == 4 {
+		msgresponse := domain.MsgResponse{
+			CommunicationID:  msgreq.CommunicationID,
+			CompleteResponse: rsp,
+			ResponseCode:     responseCode,
+			ResponseText:     "Submitted Successfully",
+			ReferenceID:      requestID,
+		}
+		_, _ = ch.svc.SaveResponse(gctx, &msgresponse)
+		rsp := response.NewCreateSMSResponse(&msgresponse)
+		apiRsp := response.CreateSMSAPIResponse{
+			StatusCodeAndMessage: port.CreateSuccess,
+			Data:                 rsp,
+		}
+		handleCreateSuccess(ctx, apiRsp)
+	}
+}
+
+func handleCreateSuccess(ctx *gin.Context, apiRsp interface{}) {
+	ctx.JSON(http.StatusOK, apiRsp)
+}

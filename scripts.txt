@@ -1,0 +1,14 @@
+openapi-generator-cli validate -i "C:\Users\ACER\Downloads\Message-gateway-backend-ts-client\Message-gateway-swagger-openapi.yaml"
+openapi-generator-cli generate --enable-post-process-file -g typescript-axios -i "C:\Users\ACER\Downloads\Message-gateway-backend-ts-client\Message-gateway-swagger-openapi.yaml" -o message-gateway-backend-typescript-client
+
+git config --global core.autocrlf true
+git pull origin main --rebase
+
+--try running these commands for checksum mismatch--
+go mod tidy
+go clean -modcache
+
+--or--
+--to update gitlab internal libraries--
+go get -u MgApplication/... 
+go get -u MgApplication/...@latest

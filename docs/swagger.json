@@ -1,0 +1,3767 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "A comprehensive API for managing addresses, offering endpoints for creation, update, deletion, and retrieval of Message Gateway data",
+        "title": "Message Gateway API",
+        "termsOfService": "http://cept.gov.in/terms",
+        "contact": {
+            "name": "API Support Team",
+            "url": "http://cept.gov.in/support",
+            "email": "support_cept@indiapost.gov.in"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/v1",
+    "paths": {
+        "/aggregate-sms-report": {
+            "get": {
+                "description": "Fetches SMS Aggregate report Applicationwise, Templatewise and Providerwise",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get Aggregate SMS Usage Report",
+                "operationId": "AggregateSMSUsageReportHandler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "01-01-2008",
+                        "name": "from-date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 1,
+                        "name": "report-type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "skip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "sortType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "18-06-2024",
+                        "name": "to-date",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SMS Aggregate report is retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.AggregateSMSReportAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/applications": {
+            "get": {
+                "description": "Lists all message applications",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Get Message Applications",
+                "operationId": "ListMessageApplicationsHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "skip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "sortType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": true,
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All Message Applications are retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.ListMsgApplicationsAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new message application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Creates a message application",
+                "operationId": "CreateMessageApplicationHandler",
+                "parameters": [
+                    {
+                        "description": "Creates Message Application",
+                        "name": "createMessageApplicationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createMessageApplicationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "New Message Application is created",
+                        "schema": {
+                            "$ref": "#/definitions/response.CreateMsgApplicationAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{application-id}": {
+            "get": {
+                "description": "Fetches Message Application by ApplicationID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Get Message Application by ApplicationID",
+                "operationId": "FetchApplicationHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 4,
+                        "name": "application-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Application is retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.FetchMsgApplicationAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Allows editing of an existing Message Application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Edits an existing Message Application",
+                "operationId": "UpdateMessageApplicationHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Edit Message Application Request",
+                        "name": "application-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Edit Message Application Request",
+                        "name": "updateMessageApplicationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateMessageApplicationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Application is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.UpdateMsgApplicationAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{application-id}/status": {
+            "put": {
+                "description": "Toggles the status of Message Application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Modifies the status of Message Application",
+                "operationId": "ToggleApplicationStatusHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 4,
+                        "name": "application-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Application status is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.ToggleAppStatusAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bulk-sms": {
+            "post": {
+                "description": "This API reads the output Excel file, constructs messages, and sends them to the NIC service in XML format.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BulkSMS"
+                ],
+                "summary": "Send processed Excel file data",
+                "operationId": "SendBulkSMSHandler",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "sendBulkSMSRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.sendBulkSMSRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/response.SendBulkSMSAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bulk-sms-initiate": {
+            "post": {
+                "description": "Initiates sending of Bulk SMSes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BulkSMS"
+                ],
+                "summary": "Send Bulk SMSes",
+                "operationId": "InitiateBulkSMSHandler",
+                "parameters": [
+                    {
+                        "description": "Initiate Bulk SMS Request",
+                        "name": "initiateBulkSMSRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.initiateBulkSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Submitted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.BulkSMSInitiateAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bulk-sms-validate-otp": {
+            "get": {
+                "description": "Validates Test SMS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BulkSMS"
+                ],
+                "summary": "Validates Test SMS",
+                "operationId": "ValidateTestSMSHandler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "lnv579ejt2vmaq03i7up",
+                        "name": "reference-id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "906627",
+                        "name": "test-string",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "True if validation succeeds, false otherwise",
+                        "schema": {
+                            "$ref": "#/definitions/response.ValidateBulkSMSOTPAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-dashboard": {
+            "get": {
+                "description": "Fetches SMS Dashboard data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get SMS Dashboard data",
+                "operationId": "SMSDashboardHandler",
+                "responses": {
+                    "200": {
+                        "description": "SMS Dashboard data is retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.SMSDashboardAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-providers": {
+            "get": {
+                "description": "Lists all message service providers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Providers"
+                ],
+                "summary": "Get Message Providers",
+                "operationId": "ListMessageProvidersHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "skip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "sortType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": true,
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All Message service providers are retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.ListSMSProvidersAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new Message Service Provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Providers"
+                ],
+                "summary": "Creates a Message Service Provider",
+                "operationId": "CreateMessageProviderHandler",
+                "parameters": [
+                    {
+                        "description": "Create Message Service Provider",
+                        "name": "createMessageProviderRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createMessageProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Message Service Provider is created",
+                        "schema": {
+                            "$ref": "#/definitions/response.CreateSMSProviderAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-providers/{provider-id}": {
+            "get": {
+                "description": "Fetches Message Service Provider by ProviderID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Providers"
+                ],
+                "summary": "Get Message Service Provider by ProviderID",
+                "operationId": "FetchMessageProviderHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 3,
+                        "name": "provider-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Provider is retrieved by ProviderID",
+                        "schema": {
+                            "$ref": "#/definitions/response.FetchSMSProviderAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Allows editing of an existing Message Provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Providers"
+                ],
+                "summary": "Edits an existing Message Provider",
+                "operationId": "UpdateMessageProviderHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Edit Message Provider Request",
+                        "name": "provider-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Edit Message Provider Request",
+                        "name": "updateMessageProviderRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateMessageProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Provider is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.UpdateSMSProviderAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-providers/{provider-id}/status": {
+            "put": {
+                "description": "Toggles the status of Message Provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Providers"
+                ],
+                "summary": "Modifies the status of Message Provider",
+                "operationId": "ToggleMessageProviderStatusHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 3,
+                        "name": "provider-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Provider status is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.ToggleProviderStatusAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-request": {
+            "post": {
+                "description": "Creates message requests for application for registered templates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMS Request"
+                ],
+                "summary": "Creates a message request",
+                "operationId": "CreateSMSRequestHandler",
+                "parameters": [
+                    {
+                        "description": "Creates Message request",
+                        "name": "createSMSRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/response.CreateSMSAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-sent-status-report": {
+            "get": {
+                "description": "Fetches all SMS requests",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get all SMS requests",
+                "operationId": "SentSMSStatusReportHandler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "01-01-2008",
+                        "name": "from-date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "skip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "sortType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "18-06-2024",
+                        "name": "to-date",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All message requests are retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.SMSSentStatusReportAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-templates": {
+            "get": {
+                "description": "Lists all message templates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get all Message Templates",
+                "operationId": "ListTemplatesHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "skip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "sortType",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All Message Templates are retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/response.ListTemplatesAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new Message template for message applications",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Creates a new message template",
+                "operationId": "CreateTemplateHandler",
+                "parameters": [
+                    {
+                        "description": "Create new Message Template",
+                        "name": "createTemplateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Message Template is created",
+                        "schema": {
+                            "$ref": "#/definitions/response.CreateTemplateAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-templates/details": {
+            "get": {
+                "description": "Fetch template details based on the provided query parameters such as TemplateLocalID, ApplicationID, and Templateformat.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get Template Details",
+                "operationId": "FetchTemplateDetailsHandler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "4",
+                        "name": "application-id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "Dear {#var#}, your {#var#} is scheduled on {#var#}. Pl check details over {#var#} - INDPOST",
+                        "name": "template-format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 355,
+                        "name": "template-local-id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fetched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.FetchTemplateDetailsAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-templates/name": {
+            "get": {
+                "description": "Fetches Message Template names by ApplicationID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get Message Template names by ApplicationID",
+                "operationId": "FetchTemplateByApplicationHandler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "4",
+                        "name": "application-id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Template names are retrieved by ApplicationID",
+                        "schema": {
+                            "$ref": "#/definitions/response.FetchTemplateNameAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-templates/{template-local-id}": {
+            "get": {
+                "description": "Fetches Message Template by TemplateLocalID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get Message Template by TemplateLocalID",
+                "operationId": "FetchTemplateHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 355,
+                        "name": "template-local-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Template is retrieved by TemplateLocalID",
+                        "schema": {
+                            "$ref": "#/definitions/response.FetchTemplateAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Allows editing of an existing Message Template",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Edits an existing Message Template",
+                "operationId": "UpdateTemplateHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Edit Message Template Request",
+                        "name": "template-local-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Edit Message Template Request",
+                        "name": "updateTemplateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Template is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.UpdateTemplatesAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sms-templates/{template-local-id}/status": {
+            "put": {
+                "description": "Modifies the status of Message Template",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Modifies the status of Message Template",
+                "operationId": "ToggleTemplateStatusHandler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 355,
+                        "name": "template-local-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message Template status is modified",
+                        "schema": {
+                            "$ref": "#/definitions/response.ToggleTemplateStatusAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/test-sms-request": {
+            "post": {
+                "description": "Creates a new test message requests",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMS Request"
+                ],
+                "summary": "Creates a test message request",
+                "operationId": "CreateTestSMSHandler",
+                "parameters": [
+                    {
+                        "description": "Creates Message request",
+                        "name": "createSMSRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createTestSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/response.TestSMSAPIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Data not found",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Data conflict errpr",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Binding or Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/apierrors.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "apierrors.APIErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/apierrors.AppError"
+                },
+                "message": {
+                    "description": "Descriptive message providing details about the error.",
+                    "type": "string"
+                },
+                "status_code": {
+                    "description": "HTTP status code representing the error type (e.g., 404 for Not Found).",
+                    "type": "integer"
+                },
+                "success": {
+                    "description": "Success flag to indicate if the operation was successful.",
+                    "type": "boolean"
+                }
+            }
+        },
+        "apierrors.AppError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apierrors.FieldError"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "apierrors.FieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "value": {}
+            }
+        },
+        "handler.createMessageApplicationRequest": {
+            "type": "object",
+            "required": [
+                "application_name",
+                "request_type",
+                "status"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "integer"
+                },
+                "application_name": {
+                    "type": "string",
+                    "example": "Test Application"
+                },
+                "request_type": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "status": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handler.createMessageProviderRequest": {
+            "type": "object",
+            "required": [
+                "configuration_keys",
+                "provider_name",
+                "services",
+                "short_name",
+                "status"
+            ],
+            "properties": {
+                "configuration_keys": {
+                    "type": "string",
+                    "example": "[{\"keyname\":\"key1\",\"keyvalue\":\"keyvalue1\"},{\"keyname\":\"key2\",\"keyvalue\":\"keyvalue2\"}]"
+                },
+                "provider_name": {
+                    "type": "string",
+                    "example": "Test Provider"
+                },
+                "services": {
+                    "type": "string",
+                    "example": "1,2,3,4"
+                },
+                "short_name": {
+                    "type": "string",
+                    "example": "TP"
+                },
+                "status": {
+                    "description": "ConfigurationKeys interface{} `json:\"configuration_keys\" validate:\"required\"`",
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handler.createSMSRequest": {
+            "type": "object",
+            "required": [
+                "application_id",
+                "facility_id",
+                "message_text",
+                "mobile_numbers",
+                "priority",
+                "sender_id",
+                "template_id"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "string",
+                    "example": "4"
+                },
+                "entity_id": {
+                    "type": "string",
+                    "example": "1301157641566214705"
+                },
+                "facility_id": {
+                    "type": "string",
+                    "example": "facility1"
+                },
+                "message_text": {
+                    "type": "string",
+                    "example": "Your OTP is : 1342789 for Account_Creation. Please keep it for further references"
+                },
+                "message_type": {
+                    "type": "string",
+                    "example": "PM"
+                },
+                "mobile_numbers": {
+                    "type": "string",
+                    "example": "9000000000"
+                },
+                "priority": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "reqid": {
+                    "type": "integer"
+                },
+                "sender_id": {
+                    "type": "string",
+                    "example": "INPOST"
+                },
+                "template_id": {
+                    "type": "string",
+                    "example": "1307160377410448739"
+                }
+            }
+        },
+        "handler.createTemplateRequest": {
+            "type": "object",
+            "required": [
+                "application_id",
+                "gateway",
+                "message_type",
+                "sender_id",
+                "status",
+                "template_format",
+                "template_id",
+                "template_name"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "string",
+                    "example": "4"
+                },
+                "entity_id": {
+                    "type": "string",
+                    "example": "1001051725995192803"
+                },
+                "gateway": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "message_type": {
+                    "type": "string",
+                    "example": "PM"
+                },
+                "sender_id": {
+                    "type": "string",
+                    "example": "INPOST"
+                },
+                "status": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "template_format": {
+                    "type": "string",
+                    "example": "Dear {#var#}, Greetings from India Post on the occasion of {#var#} - Indiapost"
+                },
+                "template_id": {
+                    "type": "string",
+                    "example": "1007188452935484904"
+                },
+                "template_local_id": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string",
+                    "example": "Test Template"
+                }
+            }
+        },
+        "handler.createTestSMSRequest": {
+            "type": "object",
+            "required": [
+                "mobile_number"
+            ],
+            "properties": {
+                "mobile_number": {
+                    "description": "Mobile number as request parameter",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.initiateBulkSMSRequest": {
+            "type": "object",
+            "required": [
+                "application_id",
+                "mobile_no",
+                "template_name",
+                "test_msg"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "string",
+                    "example": "4"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "file_id": {
+                    "type": "integer"
+                },
+                "isverified": {
+                    "type": "integer"
+                },
+                "messsage_type": {
+                    "type": "string"
+                },
+                "mobile_no": {
+                    "type": "string",
+                    "example": "9000000000"
+                },
+                "reference_id": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "template_name": {
+                    "type": "string",
+                    "example": "355"
+                },
+                "test_msg": {
+                    "type": "string",
+                    "example": "Your Transaction is Successful. Your Order No is 906627, booked on : 180261"
+                }
+            }
+        },
+        "handler.sendBulkSMSRequest": {
+            "type": "object",
+            "required": [
+                "entity_id",
+                "message_text",
+                "message_type",
+                "mobile_number",
+                "sender_id",
+                "template_id"
+            ],
+            "properties": {
+                "entity_id": {
+                    "type": "string"
+                },
+                "message_text": {
+                    "type": "string"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "mobile_number": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.updateMessageApplicationRequest": {
+            "type": "object",
+            "required": [
+                "application_name",
+                "request_type",
+                "status"
+            ],
+            "properties": {
+                "application_name": {
+                    "type": "string",
+                    "example": "Test Application"
+                },
+                "request_type": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "status": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handler.updateMessageProviderRequest": {
+            "type": "object",
+            "required": [
+                "provider_name",
+                "services",
+                "status"
+            ],
+            "properties": {
+                "configuration_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "provider_name": {
+                    "type": "string",
+                    "example": "Test Provider"
+                },
+                "services": {
+                    "type": "string",
+                    "example": "1,2,3,4"
+                },
+                "status": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "handler.updateTemplateRequest": {
+            "type": "object",
+            "required": [
+                "application_id",
+                "gateway",
+                "message_type",
+                "sender_id",
+                "status",
+                "template_format",
+                "template_id",
+                "template_name"
+            ],
+            "properties": {
+                "application_id": {
+                    "type": "string",
+                    "example": "4"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "message_type": {
+                    "type": "string",
+                    "example": "PM"
+                },
+                "sender_id": {
+                    "type": "string",
+                    "example": "INPOST"
+                },
+                "status": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "template_format": {
+                    "type": "string",
+                    "example": "Standing Instruction {#var#} on Account No {#var#} was cancelled."
+                },
+                "template_id": {
+                    "type": "string",
+                    "example": "1007002656392643880"
+                },
+                "template_name": {
+                    "type": "string",
+                    "example": "Std. Instruction CANCELLATION"
+                }
+            }
+        },
+        "response.AggregateSMSReportAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.aggregateSMSReportResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.BulkSMSInitiateAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.bulkSMSInitiateResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.CreateMsgApplicationAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.createMsgApplicationResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.CreateSMSAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.createSMSResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.CreateSMSProviderAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.createSMSProviderResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.CreateTemplateAPIResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.FetchMsgApplicationAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.fetchMsgApplicationResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.FetchSMSProviderAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.fetchSMSProviderResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.FetchTemplateAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "MetaDataResponse     `json:\",inline\"`",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.fetchTemplateResponse"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.FetchTemplateDetailsAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "MetaDataResponse     `json:\",inline\"`",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.fetchTemplateDetailsResponse"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.FetchTemplateNameAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "MetaDataResponse     `json:\",inline\"`",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.fetchTemplateNameResponse"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.ListMsgApplicationsAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.listMsgApplicationsResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.ListSMSProvidersAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.listSMSProvidersResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.ListTemplatesAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.listTemplatesResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SMSDashboardAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.smsDashboardResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.SMSSentStatusReportAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.smsSentStatusReportResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_by": {
+                    "type": "string"
+                },
+                "returned_records_count": {
+                    "type": "integer"
+                },
+                "skip": {
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_records_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SendBulkSMSAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.sendBulkSMSResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.TestSMSAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.ToggleAppStatusAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.ToggleProviderStatusAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.ToggleTemplateStatusAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.UpdateMsgApplicationAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.updateMsgApplicationResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.UpdateSMSProviderAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.updateSMSProviderResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.UpdateTemplatesAPIResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.ValidateBulkSMSOTPAPIResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "boolean"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.aggregateSMSReportResponse": {
+            "type": "object",
+            "properties": {
+                "application_name": {
+                    "type": "string"
+                },
+                "created_date": {
+                    "type": "string"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "serial_no": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string"
+                },
+                "total_sms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.bulkSMSInitiateResponse": {
+            "type": "object",
+            "properties": {
+                "msgResponse": {
+                    "type": "string"
+                },
+                "referenceID": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.createMsgApplicationResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "integer"
+                },
+                "application_name": {
+                    "type": "string"
+                },
+                "created_date": {
+                    "type": "string"
+                },
+                "request_type": {
+                    "type": "string"
+                },
+                "secret_key": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updated_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.createSMSProviderResponse": {
+            "type": "object",
+            "properties": {
+                "configuration_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "provider_id": {
+                    "type": "integer"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "services": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ConfigurationKeys interface{} `json:\"configuration_keys\" db:\"configuration_key\"`",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.createSMSResponse": {
+            "type": "object",
+            "properties": {
+                "communication_id": {
+                    "type": "string"
+                },
+                "complete_response": {
+                    "type": "string"
+                },
+                "referenceID": {
+                    "type": "string"
+                },
+                "response_text": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.fetchMsgApplicationResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "integer"
+                },
+                "application_name": {
+                    "type": "string"
+                },
+                "request_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.fetchSMSProviderResponse": {
+            "type": "object",
+            "properties": {
+                "configuration_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "provider_id": {
+                    "type": "integer"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "services": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ConfigurationKeys interface{} `json:\"configuration_keys\" db:\"configuration_key\"`",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.fetchTemplateDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "entity_id": {
+                    "type": "string"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "template_format": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "template_local_id": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.fetchTemplateNameResponse": {
+            "type": "object",
+            "properties": {
+                "template_local_id": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.fetchTemplateResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "template_format": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "template_local_id": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string"
+                },
+                "totalCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.listMsgApplicationsResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "integer"
+                },
+                "application_name": {
+                    "type": "string"
+                },
+                "request_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.listSMSProvidersResponse": {
+            "type": "object",
+            "properties": {
+                "configuration_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "provider_id": {
+                    "type": "integer"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "services": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ConfigurationKeys interface{} `json:\"configuration_keys\" db:\"configuration_key\"`",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.listTemplatesResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string"
+                },
+                "message_type": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "template_format": {
+                    "type": "string"
+                },
+                "template_id": {
+                    "type": "string"
+                },
+                "template_local_id": {
+                    "type": "integer"
+                },
+                "template_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.sendBulkSMSResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.smsDashboardResponse": {
+            "type": "object",
+            "properties": {
+                "total_applications": {
+                    "type": "integer"
+                },
+                "total_bulk_messages": {
+                    "type": "integer"
+                },
+                "total_otp_messages": {
+                    "type": "integer"
+                },
+                "total_prom_messages": {
+                    "type": "integer"
+                },
+                "total_providers": {
+                    "type": "integer"
+                },
+                "total_sms_sent": {
+                    "type": "integer"
+                },
+                "total_templates": {
+                    "type": "integer"
+                },
+                "total_trans_messages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.smsSentStatusReportResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "string"
+                },
+                "comm_id": {
+                    "type": "string"
+                },
+                "created_date": {
+                    "type": "string"
+                },
+                "facility_id": {
+                    "type": "string"
+                },
+                "gateway_id": {
+                    "type": "string"
+                },
+                "message_priority": {
+                    "type": "integer"
+                },
+                "message_text": {
+                    "type": "string"
+                },
+                "mobile_number": {
+                    "type": "integer"
+                },
+                "serial_no": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.updateMsgApplicationResponse": {
+            "type": "object",
+            "properties": {
+                "application_id": {
+                    "type": "integer"
+                },
+                "application_name": {
+                    "type": "string"
+                },
+                "request_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updated_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.updateSMSProviderResponse": {
+            "type": "object",
+            "properties": {
+                "configuration_keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "provider_id": {
+                    "type": "integer"
+                },
+                "provider_name": {
+                    "type": "string"
+                },
+                "services": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ConfigurationKeys interface{} `json:\"configuration_keys\" db:\"configuration_key\"`",
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,166 @@
+package DopChecksum
+
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"math/rand"
+	"sort"
+	"strings"
+	"time"
+)
+
+var IV = "@@@@&&&&####$$$$"
+
+func Encrypt(input string, key string) (string, error) {
+
+	_key := []byte(key)
+
+	block, err := aes.NewCipher(_key)
+	fmt.Println(err)
+	if err != nil {
+		return "", err
+	}
+
+	b := []byte(input)
+	b = pkcs5Pad(b, aes.BlockSize, len(input))
+	ciphertext := make([]byte, len(b))
+
+	_iv := []byte(IV)
+	mode := cipher.NewCBCEncrypter(block, _iv)
+	mode.CryptBlocks(ciphertext, b)
+
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func Decrypt(encrypted string, key string) (string, error) {
+
+	_key := []byte(key)
+	text, _ := base64.StdEncoding.DecodeString(encrypted)
+
+	block, err := aes.NewCipher(_key)
+	if err != nil {
+		return "", err
+	}
+	if len(text) < aes.BlockSize {
+		return "", errors.New("ciphertext too short")
+	}
+
+	_iv := []byte(IV)
+	decrypted := make([]byte, len(text))
+	mode := cipher.NewCBCDecrypter(block, _iv)
+	mode.CryptBlocks(decrypted, text)
+
+	return string(pkcs5Unpad(decrypted)), nil
+}
+
+func GenerateSignature(params map[string]string, key string) string {
+	sorted_string := getStringByParams(params)
+	fmt.Println(sorted_string)
+	return GenerateSignatureByString(sorted_string, key)
+}
+func VerifySignature(params map[string]string, key string, checksum string) bool {
+	if _, ok := params["CHECKSUMHASH"]; ok {
+		delete(params, "CHECKSUMHASH")
+	}
+	sorted_string := getStringByParams(params)
+	return VerifySignatureByString(sorted_string, key, checksum)
+}
+
+func GenerateSignatureByString(params string, key string) string {
+	salt := generateRandomString(4)
+
+	return calculateChecksum(params, key, salt)
+}
+
+func VerifySignatureByString(params string, key string, checksum string) bool {
+	paytm_hash, err := Decrypt(checksum, key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	salt := paytm_hash[len(paytm_hash)-4:]
+	return (checksum == calculateChecksum(params, key, salt))
+}
+
+func generateRandomString(length int) string {
+	data := []byte("9876543210ZYXWVUTSRQPONMLKJIHGFEDCBAabcdefghijklmnopqrstuvwxyz!@#$&_")
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = data[rand.Intn(len(data))]
+	}
+	return string(b)
+}
+
+func getStringByParams(params map[string]string) string {
+	sorted_keys := make([]string, 0, len(params))
+	for k := range params {
+		sorted_keys = append(sorted_keys, k)
+	}
+	sort.Strings(sorted_keys)
+
+	sorted_values := make([]string, 0, len(params))
+	for _, element := range sorted_keys {
+		param := params[element]
+		if strings.ToLower(params[element]) == "null" {
+			param = ""
+		}
+		sorted_values = append(sorted_values, param)
+	}
+	return strings.Join(sorted_values, "|")
+	//return "Resell00448805757124|aadf133242432424"
+}
+
+func calculateHash(params string, salt string) string {
+	finalString := params + "|" + salt
+	hash := sha256.New()
+	hash.Write([]byte(finalString))
+	hashString := hex.EncodeToString(hash.Sum(nil))
+	return hashString + salt
+}
+
+func calculateChecksum(params string, key string, salt string) string {
+	hashString := calculateHash(params, salt)
+
+	checksum, err := Encrypt(hashString, key)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	return checksum
+}
+
+func pkcs5Pad(text []byte, blocksize int, after int) []byte {
+	padding := (blocksize - len(text)%blocksize)
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(text, padtext...)
+}
+
+func pkcs5Unpad(text []byte) []byte {
+	length := len(text)
+	unpadding := int(text[length-1])
+	return text[:(length - unpadding)]
+}
+func DopChecksumGenerate(payLoad map[string]interface{}) (string, error) {
+
+	paytmParamsJSON, err := json.Marshal(payLoad)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+
+	// Print the JSON string
+	fmt.Println(string(paytmParamsJSON))
+
+	dopChecksum := GenerateSignatureByString(string(paytmParamsJSON), "DopCept@12345678")
+	//verifyChecksum := VerifySignatureByString(string(paytmParamsJSON), "KXHUJH&Ywq9pUkkr", paytmChecksum)
+
+	return dopChecksum, nil
+}

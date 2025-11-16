@@ -1,0 +1,365 @@
+package handler
+
+import (
+	"MgApplication/config"
+	_ "MgApplication/docs"
+	"fmt"
+	"io"
+	"mime"
+	"net/http"
+	"os"
+	"regexp"
+	"sync/atomic"
+
+	"github.com/Depado/ginprom"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	authz "MgApplication/api-authz"
+	apierrors "MgApplication/api-errors"
+	log "MgApplication/api-log"
+)
+
+// Router is a wrapper for HTTP router
+type Router struct {
+	*gin.Engine
+}
+
+var isShuttingDown atomic.Value
+
+func init() {
+	isShuttingDown.Store(false)
+}
+
+// SetIsShuttingDown is an exported function that allows other packages to update the isShuttingDown value
+func SetIsShuttingDown(shuttingDown bool) {
+	isShuttingDown.Store(shuttingDown)
+}
+
+func HealthCheckHandler(c *gin.Context) {
+	shuttingDown := isShuttingDown.Load().(bool)
+	if shuttingDown {
+		// If the server is shutting down, respond with Service Unavailable
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy"})
+		return
+	}
+	// If the server is not shutting down, respond with OK
+	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+}
+
+func ShutdownMiddleware() gin.HandlerFunc {
+	shuttingDown := isShuttingDown.Load().(bool)
+	return func(c *gin.Context) {
+		if shuttingDown && c.Request.URL.Path != "/healthz" {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server is shutting down"})
+			return
+		}
+		c.Next()
+	}
+}
+
+// NewRouter creates a new HTTP router
+func NewRouter(
+	cfg config.Econfig,
+	msgappHandler MgApplicationHandler,
+	appHandler ApplicationHandler,
+	providerHandler ProviderHandler,
+	templateHandler TemplateHandler,
+	// msgReqHandler MgRequestHandler,
+	// bulkMsgHandler BulkMsgApplicationHandler,
+	reportsHandler ReportsHandler,
+) (*Router, error) {
+	// Disable debug mode and write logs to file in production
+	env := cfg.AppEnv()
+	if env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+		logFile, _ := os.Create("gin.log")
+		gin.DefaultWriter = io.Writer(logFile)
+	}
+
+	if env == "development" {
+		gin.SetMode(gin.DebugMode)
+	}
+
+	if env == "test" {
+		gin.SetMode(gin.TestMode)
+	}
+
+	// CORS configuration
+	corsConfig := cors.DefaultConfig()
+	//allowedOrigins := os.Getenv("HTTP_ALLOWED_ORIGINS")
+	//originsList := strings.Split(allowedOrigins, ",")
+	//config.AllowOrigins = originsList
+
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowCredentials = true
+	// corsConfig.AllowHeaders = []string{"*"}
+	corsConfig.AllowHeaders = []string{"Content-Type", "Authorization", "Accept"}
+	corsConfig.AllowBrowserExtensions = true
+	// corsConfig.AllowMethods = []string{"*"}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"} // Ensure OPTIONS is allowed for preflight
+
+	router := gin.New()
+
+	//CORS Middleware
+	// Apply CORS middleware globally before routes
+	router.Use(cors.New(corsConfig))
+	router.Use(ShutdownMiddleware())
+	router.Use(func(c *gin.Context) {
+		log.SetCtxLoggerMiddleware(c)
+	})
+	router.Use(func(c *gin.Context) {
+		log.RequestResponseLoggerMiddleware(c)
+	})
+
+	// RedirectTrailingSlash to ensure URL consistency
+	router.RedirectTrailingSlash = false
+
+	// Custom error handling for undefined routes
+	router.NoRoute(func(c *gin.Context) {
+		// c.JSON(http.StatusNotFound, gin.H{
+		// 	"success": false,
+		// 	"message": []string{"Invalid Path"},
+		// 	"errorno": []string{"INV1"},
+		// })
+		apierrors.HandleNoRouteError(c)
+	})
+
+	router.NoMethod(func(c *gin.Context) {
+		// c.JSON(http.StatusMethodNotAllowed, gin.H{
+		// 	"success": false,
+		// 	"message": []string{"Method not Allowed"},
+		// 	"errorno": []string{"MD01"},
+		// })
+		apierrors.HandleNoMethodError(c)
+	})
+
+	router.Use(AuthMiddleware())
+
+	// router.Use(gin.LoggerWithFormatter(customLogger), gin.Recovery(), cors.New(config), ValidateContentType([]string{"application/json"}))
+	if env == "production" {
+		router.Use(gin.Recovery(), cors.New(corsConfig), ValidateContentType([]string{"application/json", "multipart/form-data", ""}))
+	}
+
+	if env == "development" {
+		router.Use(gin.Recovery(), cors.New(corsConfig), ValidateContentType([]string{"application/json", "multipart/form-data", "", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8", "text/css,*/*;q=0.1", "application/json,*/*", "*/*"}))
+
+	}
+	if env == "testing" {
+		router.Use(gin.Recovery(), cors.New(corsConfig), ValidateContentType([]string{"application/json", "multipart/form-data", "", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8", "text/css,*/*;q=0.1", "application/json,*/*", "*/*"}))
+	}
+
+	router.GET("/", func(ctx *gin.Context) { handleSuccess(ctx, "Welcome to Message Gateway Backend Service") })
+
+	//healthz URL
+	router.GET("/healthz", HealthCheckHandler)
+
+	// sms := router.Group("/sms")
+
+	/*metrics*/
+	p := ginprom.New(
+		ginprom.Engine(router),
+		ginprom.Subsystem("gin"),
+		ginprom.Path("/metrics"),
+	)
+	router.Use(p.Instrument())
+
+	v1 := router.Group("/v1")
+	{
+		// Swagger
+		v1.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+		Application := v1.Group("/applications") //.Use(authMiddleware(token))
+		{
+			Application.POST("", appHandler.CreateMessageApplicationHandler)
+			Application.GET("", appHandler.ListMessageApplicationsHandler)
+			Application.GET("/:application-id", appHandler.FetchApplicationHandler)
+			Application.PUT("/:application-id", appHandler.UpdateMessageApplicationHandler)
+			Application.PUT("/:application-id/status", appHandler.ToggleApplicationStatusHandler)
+		}
+
+		Provider := v1.Group("/sms-providers")
+		{
+			Provider.POST("", providerHandler.CreateMessageProviderHandler)
+			Provider.GET("", providerHandler.ListMessageProvidersHandler)
+			Provider.GET("/:provider-id", providerHandler.FetchMessageProviderHandler)
+			Provider.PUT("/:provider-id", providerHandler.UpdateMessageProviderHandler)
+			Provider.PUT("/:provider-id/status", providerHandler.ToggleMessageProviderStatusHandler)
+		}
+
+		Template := v1.Group("/sms-templates")
+		{
+			Template.POST("", templateHandler.CreateTemplateHandler)
+			Template.GET("", templateHandler.ListTemplatesHandler)
+			Template.GET("/:template-local-id", templateHandler.FetchTemplateHandler)
+			Template.GET("/name", templateHandler.FetchTemplateByApplicationHandler) //by appID query param
+			Template.GET("/details", templateHandler.FetchTemplateDetailsHandler)    //takes query param, by template-format is yet to be tested
+			Template.PUT("/:template-local-id/status", templateHandler.ToggleTemplateStatusHandler)
+			Template.PUT("/:template-local-id", templateHandler.UpdateTemplateHandler)
+		}
+
+		v1.POST("/sms-request", msgappHandler.CreateSMSRequestHandler)
+		v1.POST("/test-sms-request", msgappHandler.CreateTestSMSHandler)
+
+		//reports
+		v1.GET("/sms-dashboard", reportsHandler.SMSDashboardHandler)
+		v1.GET("/sms-sent-status-report", reportsHandler.SentSMSStatusReportHandler)
+		v1.GET("/aggregate-sms-report", reportsHandler.AggregateSMSUsageReportHandler)
+
+		v1.POST("/bulk-sms-initiate", msgappHandler.InitiateBulkSMSHandler)
+		v1.GET("/bulk-sms-validate-otp", msgappHandler.ValidateTestSMSHandler)
+		// v1.POST("/bulk-sms-upload-file", msgappHandler.BuildTargetFile) //not in use
+		v1.POST("/bulk-sms", msgappHandler.SendBulkSMSHandler)
+	}
+
+	return &Router{
+		router,
+	}, nil
+}
+
+// Serve starts the HTTP server
+func (r *Router) Serve(listenAddr string) error {
+	return r.Run(listenAddr)
+}
+
+// customLogger is a custom Gin logger
+// func customLogger(param gin.LogFormatterParams) string {
+// 	return fmt.Sprintf("[%s] - %s \"%s %s %s %d %s [%s]\"\n",
+// 		param.TimeStamp.Format(time.RFC1123),
+// 		param.ClientIP,
+// 		param.Method,
+// 		param.Path,
+// 		param.Request.Proto,
+// 		param.StatusCode,
+// 		param.Latency.Round(time.Millisecond),
+// 		param.Request.UserAgent(),
+// 	)
+// }
+
+// List of paths to be ignored for authorization (regular expressions)
+var ignoredPaths = []string{
+	".*/healthz$",
+	".*/swagger/.*$",
+	".*/metrics/.*$",
+	// ".*/metrics.*$",
+}
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Check if the current request path matches any of the ignored paths
+		for _, pathPattern := range ignoredPaths {
+			matched, err := regexp.MatchString(pathPattern, c.Request.URL.Path)
+			if err != nil {
+				log.Error(c, "Error matching ignored path pattern: %v", err)
+				apierrors.HandleValidationError(c, err)
+				c.Abort()
+				return
+			}
+			if matched {
+				log.Info(c, "Path %s is ignored for authorization", c.Request.URL.Path)
+				c.Next() // Skip authorization and proceed to the next middleware or handler
+				return
+			}
+		}
+
+		// Proceed with authorization if the path is not ignored
+		authResult, authErr := authz.Authorize(c)
+		if authErr != nil {
+			fmt.Println(c, "Authorization error: %v", authErr)
+
+			// Check if authErr is of type AppError to access the Code field
+			if appErr, ok := authErr.(*apierrors.AppError); ok {
+				if appErr.Code == "401" {
+					apierrors.HandleUnauthorizedError(c)
+				} else if appErr.Code == "500" {
+					apierrors.HandleError(c, appErr)
+				}
+			} else {
+				apierrors.HandleError(c, authErr) // Handle non-AppError errors generically
+			}
+
+			c.Abort()
+			return
+		}
+		if !authResult.Authorization {
+			fmt.Println(c, "Access denied: User %s is not authorized", c.GetHeader("X-User-ID"))
+			apierrors.HandleForbiddenError(c)
+			c.Abort()
+			return
+		}
+
+		c.Next() // Proceed to the next middleware or request handler
+	}
+}
+
+// original api template
+func ValidateContentType2(allowedTypes []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// contentType := c.GetHeader("Content-Type")
+		contentType := c.GetHeader("Accept")
+		// Check if the Content-Type is in the allowedTypes
+		validContentType := false
+		for _, allowedType := range allowedTypes {
+			if contentType == allowedType {
+				validContentType = true
+				break
+			}
+		}
+
+		if !validContentType {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{
+				"success": false,
+				"message": []string{"Invalid Content-Type. Supported types are: " + fmt.Sprintf("%v", allowedTypes)},
+				"errorno": []string{"USP1"},
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func ValidateContentType(allowedTypes []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		contentType := c.GetHeader("Content-Type")
+		//fmt.Println("content type from Getheader is:", contentType)
+
+		// Parse the media type and any parameters if the content type is not empty
+		var mediaType string
+		if contentType != "" {
+			var err error
+			mediaType, _, err = mime.ParseMediaType(contentType)
+			if err != nil {
+				c.JSON(http.StatusUnsupportedMediaType, gin.H{
+					"success": false,
+					"message": []string{"Invalid Content-Type header"},
+					"errorno": []string{"USP1"},
+				})
+				c.Abort()
+				return
+			}
+		}
+
+		// Check if the mediaType is in the allowedTypes or if the contentType is empty
+		validContentType := false
+		for _, allowedType := range allowedTypes {
+			if mediaType == allowedType || (contentType == "" && allowedType == "") {
+				validContentType = true
+				break
+			}
+		}
+
+		if !validContentType {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{
+				"success": false,
+				"message": []string{"Invalid Content-Type. Supported types are: " + fmt.Sprintf("%v", allowedTypes)},
+				"errorno": []string{"USP1"},
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

@@ -1,0 +1,40 @@
+package route
+
+import (
+	"MgApplication/config"
+	handler "MgApplication/handler"
+	repo "MgApplication/repo/postgres"
+	dblib "MgApplication/api-db"
+)
+
+//	func LoggerInit(loglevel string) *logger.Logger {
+//		log := logger.New(loglevel)
+//		return log
+//	}
+func Routes(db *dblib.DB, cfg config.Econfig) (router *handler.Router, err1 error) {
+	msgRepo := repo.NewMgApplicationRepository(db, cfg)
+	msgHandler := handler.NewMgApplicationHandler(*msgRepo, cfg)
+
+	appRepo := repo.NewApplicationRepository(db, cfg)
+	appHandler := handler.NewApplicationHandler(*appRepo, cfg)
+
+	providerRepo := repo.NewProviderRepository(db, cfg)
+	providerHandler := handler.NewProviderHandler(*providerRepo, cfg)
+
+	templateRepo := repo.NewTemplateRepository(db, cfg)
+	templateHandler := handler.NewTemplateHandler(*templateRepo, cfg)
+
+	reportsRepo := repo.NewReportsRepository(db, cfg)
+	reportsHandler := handler.NewReportsHandler(*reportsRepo, cfg)
+
+	router, err1 = handler.NewRouter(
+		cfg,
+		*msgHandler,
+		*appHandler,
+		*providerHandler,
+		*templateHandler,
+		*reportsHandler,
+	)
+
+	return router, err1
+}

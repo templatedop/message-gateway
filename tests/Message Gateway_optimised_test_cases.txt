@@ -1,0 +1,51 @@
+package tests
+
+import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"gotest.tools/v3/assert"
+)
+
+
+
+
+
+
+
+// Test Case Summary
+// Create_Message_Application: 2 test cases
+// Get_Message_Applications: 2 test cases
+// Get_Message_Application_by_ID: 2 test cases
+// Edit_Message_Application: 0 test cases
+// Status_Toggler_Message_Application: 0 test cases
+// Get_Active_Applications: 2 test cases
+// Create_Message_Provider: 2 test cases
+// Get_Message_Providers: 2 test cases
+// Get_Provider_by_ID: 2 test cases
+// Edit_Message_Provider: 0 test cases
+// Status_Toggler_Message_Provider: 0 test cases
+// Get_Active_Providers: 2 test cases
+// Maintain_Template: 2 test cases
+// List_Templates: 2 test cases
+// Status_Toggler_Template: 0 test cases
+// Get_Template_by_ID: 2 test cases
+// Get_Template_names_by_App_ID: 2 test cases
+// Edit_Template: 0 test cases
+// template_details_by_query: 2 test cases
+// template_details_by_template_local_id: 2 test cases
+// template_details_by_template_format: 2 test cases
+// Initiate_Bulk_SMS: 2 test cases
+// Validate_Test_SMS: 2 test cases
+// send_file: 2 test cases
+// Aggregate_SMS_Report: 2 test cases
+// Get_Dashboard_Data: 2 test cases
+// SMS_Sent_status: 2 test cases
+// Test_Message: 2 test cases
+// Create_Message_Request: 2 test cases
+
+// Total Test Cases: 46
+// Positive Test Cases: 23
+// Negative Test Cases: 23

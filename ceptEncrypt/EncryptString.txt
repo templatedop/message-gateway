@@ -1,0 +1,130 @@
+package EncryptString
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"strings"
+)
+
+// EncryptString encrypts a string using a secret key and returns the URL-encoded ciphertext.
+func EncryptString(input string) (string, error) {
+	enc_Key, err := hex.DecodeString(os.Getenv("ENCRYPT_KEY"))
+	if err != nil {
+		return "", err
+	}
+	
+	block, err := aes.NewCipher(enc_Key)
+	if err != nil {
+		return "", err
+	}
+
+	// PKCS7 padding
+	padding := aes.BlockSize - (len(input) % aes.BlockSize)
+	padText := []byte(strings.Repeat(string(padding), padding))
+	
+	paddedinput:= append([]byte(input), padText...)
+
+	ciphertext := make([]byte, aes.BlockSize+len(paddedinput))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", err
+	}
+
+	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(ciphertext[aes.BlockSize:], []byte(paddedinput))
+
+	return url.QueryEscape(base64.URLEncoding.EncodeToString(ciphertext)), nil
+}
+
+// DecryptString decrypts a URL-encoded string using a secret key.
+func DecryptString(encoded string) (string, error) {
+	input, err := url.QueryUnescape(encoded)
+	if err != nil {
+		return "", err
+	}
+
+	ciphertext, err := base64.URLEncoding.DecodeString(input)
+	if err != nil {
+		return "", err
+	}
+
+	dec_Key, err := hex.DecodeString(os.Getenv("ENCRYPT_KEY"))
+	block, err := aes.NewCipher(dec_Key)
+	if err != nil {
+		return "", err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return "", fmt.Errorf("ciphertext is too short")
+	}
+
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(ciphertext, ciphertext)
+
+	// Remove PKCS7 padding
+	padding := int(ciphertext[len(ciphertext)-1])
+	ciphertext = ciphertext[:len(ciphertext)-padding]
+
+	return string(ciphertext), nil
+}
+
+// // EncryptString encrypts a string using a secret key and returns the URL-encoded ciphertext.
+// func EncryptString(input string) (string, error) {
+// 	enc_Key, err := hex.DecodeString(os.Getenv("ENCRYPT_KEY"))
+// 	block, err := aes.NewCipher(enc_Key)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	ciphertext := make([]byte, aes.BlockSize+len(input))
+// 	iv := ciphertext[:aes.BlockSize]
+// 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+// 		return "", err
+// 	}
+
+// 	mode := cipher.NewCBCEncrypter(block, iv)
+// 	mode.CryptBlocks(ciphertext[aes.BlockSize:], []byte(input))
+
+// 	return url.QueryEscape(base64.URLEncoding.EncodeToString(ciphertext)), nil
+// }
+
+// // DecryptString decrypts a URL-encoded string using a secret key.
+// func DecryptString(encoded string) (string, error) {
+
+// 	input, err := url.QueryUnescape(encoded)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	ciphertext, err := base64.URLEncoding.DecodeString(input)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	dec_Key, err := hex.DecodeString(os.Getenv("ENCRYPT_KEY"))
+// 	block, err := aes.NewCipher(dec_Key)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	if len(ciphertext) < aes.BlockSize {
+// 		return "", fmt.Errorf("ciphertext is too short")
+// 	}
+
+// 	iv := ciphertext[:aes.BlockSize]
+// 	ciphertext = ciphertext[aes.BlockSize:]
+
+// 	mode := cipher.NewCBCDecrypter(block, iv)
+// 	mode.CryptBlocks(ciphertext, ciphertext)
+
+// 	return string(ciphertext), nil
+// }

@@ -1,0 +1,55 @@
+AppName: mgSolution
+AppEnv: testing
+#AppEnv: production
+
+HttpUrl: 127.0.0.1
+HttpPort: 8080
+HttpAllowedOrigins: "*"
+#loglevel: debug
+loglevel: info
+
+DBConnection: postgres
+#DBHost: 10.20.84.26
+DBHost: 10.20.166.53
+DBPort: 5432
+DBdatabase: msggatewaydb
+DBUsername: msggateway_rw_user
+DBPassword: DoPrw@123
+
+DBQueryTimeoutLow: 2s
+DBQueryTimeoutMed: 5s
+
+RedisServer: localhost:6379
+RedisPassword:
+
+TokenSymmetricKey: 12345678901234567890123456789012
+TokenDuration: 15m
+ShutDownTime: 10s
+ShutDowntype:
+
+#CDAC Configuratin
+CDACusername: appostsms
+CDACpassword: dop123*
+CDACsenderId: APPOST
+CDACsecureKey: c7d427c9-63e7-4eec-a227-3ef840a75269
+
+#NIC Configuration
+NICusername: speedpost.sms
+NICpassword: Ao@%231234
+
+MSGStoreRequest: 1
+
+SearchPath: msggateway
+
+#MaxConns : 50
+MaxConns: 100
+MinConns: 1
+MaxConnLifetime: 120
+MaxConnIdleTime: 30
+HealthCheckPeriod: 5
+
+# Authorisation configuration
+AuthDefaultTimeout: 10s
+AuthDefaultMaxRetries: 3
+AuthDefaultRetryWait: 1s
+AuthDefaultMaxRetryWait: 3s

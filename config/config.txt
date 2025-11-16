@@ -1,0 +1,514 @@
+package config
+
+import (
+	"os"
+	"sync"
+	"time"
+
+	"github.com/spf13/viper"
+	log "MgApplication/api-log"
+)
+
+var (
+	once     sync.Once
+	instance Econfig
+)
+
+type config struct {
+	AppName            string
+	AppEnv             string
+	DBConnection       string
+	TokenSymmetricKey  string
+	HttpUrl            string
+	HttpPort           string
+	DBHost             string
+	DBPort             string
+	DBdatabase         string
+	DBUsername         string
+	DBPassword         string
+	SearchPath         string
+
+	DBQueryTimeoutLow time.Duration
+	DBQueryTimeoutMed time.Duration
+
+	TokenDuration      string
+	RedisServer        string
+	RedisPassword      string
+	HttpAllowedOrigins string
+	Loglevel           string
+	ShutDownTime       string
+	ShutDowntype       string
+
+	SMSvarLength int
+
+	CDACusername  string
+	CDACpassword  string
+	CDACsenderId  string
+	CDACsecureKey string
+	CDACsmsURL    string
+
+	NICINPOSTusername string
+	NICINPOSTpassword string
+
+	NICDOPBNKusername string
+	NICDOPBNKpassword string
+
+	NICDOPPLIusername string
+	NICDOPPLIpassword string
+
+	NICsmsURL string
+
+	NICbulkURL      string
+	NICbulkUsername string
+	NICbulkPassword string
+
+	NICsmsMultlingURL string
+
+	DltEntityID string
+	NICSenderID string
+
+	MSGStoreRequest   string
+	MaxConns          int
+	MinConns          int
+	MaxConnLifetime   int
+	MaxConnIdleTime   int
+	HealthCheckPeriod int
+
+	//auth configuration
+	AuthDefaultTimeout      time.Duration
+	AuthDefaultMaxRetries   int
+	AuthDefaultRetryWait    time.Duration
+	AuthDefaultMaxRetryWait time.Duration
+}
+
+/*
+type Econfig struct {
+	appName            string `yaml:"AppName"`
+	appEnv             string `yaml:"AppEnv"`
+	dBConnection       string `yaml:"DBConnection"`
+	tokenSymmetricKey  string `yaml:"TokenSymmetricKey"`
+	httpUrl            string `yaml:"HttpUrl"`
+	httpPort           string `yaml:"HttpPort"`
+	dBHost             string `yaml:"DBHost"`
+	dBPort             string `yaml:"DBPort"`
+	dBdatabase         string `yaml:"DBdatabase"`
+	dBUsername         string `yaml:"DBUsername"`
+	dBPassword         string `yaml:"DBPassword"`
+	tokenDuration      string `yaml:"TokenDuration"`
+	redisServer        string `yaml:"RedisServer"`
+	redisPassword      string `yaml:"RedisPassword"`
+	httpAllowedOrigins string `yaml:"HttpAllowedOrigins"`
+	loglevel           string `yaml:"Loglevel"`
+	shutDownTime       string `yaml:"ShutDownTime"`
+	shutDowntype       string `yaml:"ShutDowntype"`
+}*/
+
+type Econfig struct {
+	appName           string `mapstructure:"AppName"`
+	appEnv            string `mapstructure:"AppEnv"`
+	dBConnection      string `mapstructure:"DBConnection"`
+	tokenSymmetricKey string `mapstructure:"TokenSymmetricKey"`
+	httpUrl           string `mapstructure:"HttpUrl"`
+	httpPort          string `mapstructure:"HttpPort"`
+
+	dBHost string `mapstructure:"DBHost"`
+	dBPort string `mapstructure:"DBPort"`
+
+	dBUsername string `mapstructure:"DBUsername"`
+	dBPassword string `mapstructure:"DBPassword"`
+	dBdatabase string `mapstructure:"DBdatabase"`
+	searchPath string `mapstructure:"SearchPath"`
+
+	dbQueryTimeoutLow time.Duration `mapstructure:"DBQueryTimeoutLow"`
+	dbQueryTimeoutMed time.Duration `mapstructure:"DBQueryTimeoutMed"`
+
+	tokenDuration string `mapstructure:"TokenDuration"`
+
+	redisServer        string `mapstructure:"RedisServer"`
+	redisPassword      string `mapstructure:"RedisPassword"`
+	httpAllowedOrigins string `mapstructure:"HttpAllowedOrigins"`
+	loglevel           string `mapstructure:"Loglevel"`
+	shutDownTime       string `mapstructure:"ShutDownTime"`
+	shutDowntype       string `mapstructure:"ShutDowntype"`
+
+	maxConns          int `mapstructure:"MaxConns"`
+	minConns          int `mapstructure:"MinConns"`
+	maxConnLifetime   int `mapstructure:"MaxConnLifetime"`
+	maxConnIdleTime   int `mapstructure:"MaxConnIdleTime"`
+	healthCheckPeriod int `mapstructure:"HealthCheckPeriod"`
+
+	smsVarLength int `mapstructure:"SMSvarLength"`
+
+	cdacUsername  string `mapstructure:"CDACusername"`
+	cdacPassword  string `mapstructure:"CDACpassword"`
+	cdacSenderId  string `mapstructure:"CDACsenderId"`
+	cdacSecureKey string `mapstructure:"CDACsecureKey"`
+	cdacSMSUrl    string `mapstructure:"CDACsmsURL"`
+
+	nicInpostUsername string `mapstructure:"NICINPOSTusername"`
+	nicInpostPassword string `mapstructure:"NICINPOSTpassword"`
+
+	nicDopbnkUsername string `mapstructure:"NICDOPBNKusername"`
+	nicDopbnkPassword string `mapstructure:"NICDOPBNKpassword"`
+
+	nicDoppliUsername string `mapstructure:"NICDOPPLIusername"`
+	nicDoppliPassword string `mapstructure:"NICDOPPLIpassword"`
+
+	nicSMSURL string `mapstrucure:"NICsmsURL"`
+
+	nicBulkURL      string `mapstructure:"NICbulkURL"`
+	nicBulkUsername string `mapstructure:"NICbulkUsername"`
+	nicBulkPassword string `mapstructure:"NICbulkPassword"`
+
+	nicSMSMultLingURL string `mapstructure:"NICsmsMultlingURL"`
+
+	dltEntityID string `mapstructure:"DltEntityID"`
+	nicSenderID string `mapstructure:"NICSenderID"`
+
+	msgStoreRequest string `mapstructure:"MSGStoreRequest"`
+
+	authDefaultTimeout      time.Duration `mapstructure:"AuthDefaultTimeout"`
+	authDefaultMaxRetries   int           `mapstructure:"AuthDefaultMaxRetries"`
+	authDefaultRetryWait    time.Duration `mapstructure:"AuthDefaultRetryWait"`
+	authDefaultMaxRetryWait time.Duration `mapstructure:"AuthDefaultMaxRetryWait"`
+}
+
+func NewConfig(c config) Econfig {
+	return Econfig{
+		appName: c.AppName,
+		appEnv:  c.AppEnv,
+
+		tokenSymmetricKey: c.TokenSymmetricKey,
+
+		httpUrl:  c.HttpUrl,
+		httpPort: c.HttpPort,
+
+		dBConnection: c.DBConnection,
+		dBHost:       c.DBHost,
+		dBPort:       c.DBPort,
+		dBUsername:   c.DBUsername,
+		dBPassword:   c.DBPassword,
+		dBdatabase:   c.DBdatabase,
+		searchPath:   c.SearchPath,
+
+		dbQueryTimeoutLow: c.DBQueryTimeoutLow,
+		dbQueryTimeoutMed: c.DBQueryTimeoutMed,
+
+		tokenDuration:      c.TokenDuration,
+		redisServer:        c.RedisServer,
+		redisPassword:      c.RedisPassword,
+		httpAllowedOrigins: c.HttpAllowedOrigins,
+
+		loglevel: c.Loglevel,
+
+		shutDownTime: c.ShutDownTime,
+		shutDowntype: c.ShutDowntype,
+
+		maxConns:          c.MaxConns,
+		minConns:          c.MinConns,
+		maxConnLifetime:   c.MaxConnLifetime,
+		maxConnIdleTime:   c.MaxConnIdleTime,
+		healthCheckPeriod: c.HealthCheckPeriod,
+
+		smsVarLength: c.SMSvarLength,
+
+		cdacSMSUrl:    c.CDACsmsURL,
+		cdacUsername:  c.CDACusername,
+		cdacPassword:  c.CDACpassword,
+		cdacSenderId:  c.CDACsenderId,
+		cdacSecureKey: c.CDACsecureKey,
+
+		nicSMSURL: c.NICsmsURL,
+
+		nicInpostUsername: c.NICINPOSTusername,
+		nicInpostPassword: c.NICINPOSTpassword,
+
+		nicDopbnkUsername: c.NICDOPBNKusername,
+		nicDopbnkPassword: c.NICDOPBNKpassword,
+
+		nicDoppliUsername: c.NICDOPPLIusername,
+		nicDoppliPassword: c.NICDOPPLIpassword,
+
+		nicSMSMultLingURL: c.NICsmsMultlingURL,
+
+		nicBulkURL:      c.NICbulkURL,
+		nicBulkUsername: c.NICbulkUsername,
+		nicBulkPassword: c.NICbulkPassword,
+
+		dltEntityID: c.DltEntityID,
+		nicSenderID: c.NICSenderID,
+
+		msgStoreRequest: c.MSGStoreRequest,
+
+		authDefaultTimeout:      c.AuthDefaultTimeout,
+		authDefaultMaxRetries:   c.AuthDefaultMaxRetries,
+		authDefaultRetryWait:    c.AuthDefaultRetryWait,
+		authDefaultMaxRetryWait: c.AuthDefaultMaxRetryWait,
+	}
+}
+
+func Load() Econfig {
+	c := config{}
+	once.Do(func() {
+		viper.SetConfigName("config")
+		viper.AddConfigPath(".")
+		viper.SetConfigType("yaml")
+
+		//log := logger.New("DEBUG")
+
+		// Attempt to read the configuration file
+		if err := viper.ReadInConfig(); err != nil {
+			log.Error(nil, "Failed to read configuration: %s", err.Error())
+			os.Exit(1)
+		}
+
+		// Unmarshal the configuration into the struct
+		if err := viper.Unmarshal(&c); err != nil {
+			log.Error(nil, "Failed to unmarshal configuration: %s", err.Error())
+			os.Exit(1)
+		}
+
+		instance = NewConfig(c)
+
+		// Assign configuration values to environment variables
+		// os.Setenv("APP_NAME", c.AppName)
+		// os.Setenv("APP_ENV", c.AppEnv)
+		// os.Setenv("DB_CONNECTION", c.DBConnection)
+		// os.Setenv("TOKEN_SYMMETRIC_KEY", c.TokenSymmetricKey)
+		// os.Setenv("HTTP_URL", c.HttpUrl)
+		// os.Setenv("HTTP_PORT", c.HttpPort)
+		// os.Setenv("DB_HOST", c.DBHost)
+		// os.Setenv("DB_PORT", c.DBPort)
+		// os.Setenv("DB_DATABASE", c.DBdatabase)
+		// os.Setenv("DB_USERNAME", c.DBUsername)
+		// os.Setenv("DB_PASSWORD", c.DBPassword)
+		// os.Setenv("HTTP_ALLOWED_ORIGINS", c.HttpAllowedOrigins)
+		// os.Setenv("REDIS_SERVER", c.RedisServer)
+		// os.Setenv("REDIS_PASSWORD", c.RedisPassword)
+		// os.Setenv("TOKEN_DURATION", c.TokenDuration)
+		// os.Setenv("LOG_LEVEL", c.Loglevel)
+		// os.Setenv("SHUTDOWN_TIME", c.ShutDownTime)
+		// os.Setenv("SHUTDOWN_TYPE", c.ShutDowntype)
+	})
+	return instance
+}
+
+func (c *Econfig) AppName() string {
+	return c.appName
+}
+
+func (c *Econfig) AppEnv() string {
+	return c.appEnv
+}
+
+func (c *Econfig) TokenSymmetricKey() string {
+	return c.tokenSymmetricKey
+}
+
+// func (c *Econfig) Dbhost() string {
+// 	return c.dBHost
+// }
+
+// HttpUrl returns the httpUrl field value.
+func (c *Econfig) HttpUrl() string {
+	return c.httpUrl
+}
+
+// HttpPort returns the httpPort field value.
+func (c *Econfig) HttpPort() string {
+	return c.httpPort
+}
+
+func (c *Econfig) DBConnection() string {
+	return c.dBConnection
+}
+
+// DBHost returns the dBHost field value.
+func (c *Econfig) DBHost() string {
+	return c.dBHost
+}
+
+// DBPort returns the dBPort field value.
+func (c *Econfig) DBPort() string {
+	return c.dBPort
+}
+
+// DBUsername returns the dBUsername field value.
+func (c *Econfig) DBUsername() string {
+	return c.dBUsername
+}
+
+// DBPassword returns the dBPassword field value.
+func (c *Econfig) DBPassword() string {
+	return c.dBPassword
+}
+
+// DBDatabase returns the dBdatabase field value.
+func (c *Econfig) DBDatabase() string {
+	return c.dBdatabase
+}
+
+func (c *Econfig) SearchPath() string {
+	return c.searchPath
+}
+
+//Timeout for methods other than list
+func (c *Econfig) GetDBQueryTimeoutLow() time.Duration {
+	return c.dbQueryTimeoutLow
+}
+
+//Timeout for list method
+func (c *Econfig) GetDBQueryTimeoutMed() time.Duration {
+	return c.dbQueryTimeoutMed
+}
+
+// TokenDuration returns the tokenDuration field value.
+func (c *Econfig) TokenDuration() string {
+	return c.tokenDuration
+}
+
+// RedisServer returns the redisServer field value.
+func (c *Econfig) RedisServer() string {
+	return c.redisServer
+}
+
+// RedisPassword returns the redisPassword field value.
+func (c *Econfig) RedisPassword() string {
+	return c.redisPassword
+}
+
+// HttpAllowedOrigins returns the httpAllowedOrigins field value.
+func (c *Econfig) HttpAllowedOrigins() string {
+	return c.httpAllowedOrigins
+}
+
+// LogLevel returns the loglevel field value.
+func (c *Econfig) LogLevel() string {
+	return c.loglevel
+}
+
+// ShutDownTime returns the shutDownTime field value.
+func (c *Econfig) ShutDownTime() string {
+	return c.shutDownTime
+}
+
+// ShutDownType returns the shutDowntype field value.
+func (c *Econfig) ShutDownType() string {
+	return c.shutDowntype
+}
+
+func (c *Econfig) MaxConns() int {
+	return c.maxConns
+}
+
+func (c *Econfig) MinConns() int {
+	return c.minConns
+}
+
+func (c *Econfig) MaxConnLifetime() int {
+	return c.maxConnLifetime
+}
+
+func (c *Econfig) MaxConnIdleTime() int {
+	return c.maxConnIdleTime
+}
+
+func (c *Econfig) HealthCheckPeriod() int {
+	return c.healthCheckPeriod
+}
+
+func (c *Econfig) SMSVarLength() int {
+	return c.smsVarLength
+}
+
+func (c *Econfig) CDACUserName() string {
+	return c.cdacUsername
+}
+
+func (c *Econfig) CDACPassword() string {
+	return c.cdacPassword
+}
+
+func (c *Econfig) CDACSenderID() string {
+	return c.cdacSenderId
+}
+
+func (c *Econfig) CDACSecureKey() string {
+	return c.cdacSecureKey
+}
+
+func (c *Econfig) CDACSMSURL() string {
+	return c.cdacSMSUrl
+}
+
+func (c *Econfig) NICSMSURL() string {
+	return c.nicSMSURL
+}
+
+func (c *Econfig) NICINPOSTUserName() string {
+	return c.nicInpostUsername
+}
+
+func (c *Econfig) NICINPOSTPassword() string {
+	return c.nicInpostPassword
+}
+
+func (c *Econfig) NICDOPBNKUserName() string {
+	return c.nicDopbnkUsername
+}
+
+func (c *Econfig) NICDOPBNKPassword() string {
+	return c.nicDopbnkPassword
+}
+
+func (c *Econfig) NICDOPPLIUserName() string {
+	return c.nicDoppliUsername
+}
+
+func (c *Econfig) NICDOPPLIPassword() string {
+	return c.nicDoppliPassword
+}
+
+func (c *Econfig) NICBulkURL() string {
+	return c.nicBulkURL
+}
+
+func (c *Econfig) NICBulkUsername() string {
+	return c.nicBulkUsername
+}
+
+func (c *Econfig) NICBulkPassword() string {
+	return c.nicBulkPassword
+}
+
+func (c *Econfig) DltEntityID() string {
+	return c.dltEntityID
+}
+
+func (c *Econfig) NICSenderID() string {
+	return c.nicSenderID
+}
+
+func (c *Econfig) NICMultLingURL() string {
+	return c.nicSMSMultLingURL
+}
+
+func (c *Econfig) MessageStoreRequest() string {
+	return c.msgStoreRequest
+}
+
+func (c *Econfig) GetAuthDefaultTimeout() time.Duration {
+	return c.authDefaultTimeout
+}
+
+func (c *Econfig) GetAuthDefaultMaxRetries() int {
+	return c.authDefaultMaxRetries
+}
+
+func (c *Econfig) GetAuthDefaultRetryWait() time.Duration {
+	return c.authDefaultRetryWait
+}
+
+func (c *Econfig) GetAuthDefaultMaxRetryWait() time.Duration {
+	return c.authDefaultMaxRetryWait
+}

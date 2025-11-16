@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package smsrequest.v1;
+
+option go_package = "MgApplication/gen/smsrequest/v1;MgApplication";
+
+import "buf/validate/validate.proto";
+
+// The CreateSMSRequest message represents the structure of a request to send an SMS.
+message CreateSMSRequestHandlerRequest {
+  uint64 request_id = 1;         // Unique ID for the request
+  string application_id = 2;    // ID of the application sending the request
+  string facility_id = 3;       // ID of the facility
+  int32 priority = 4;           // Priority of the message
+  string message_text = 5;      // Text of the SMS message
+  string sender_id = 6;         // Sender ID for the SMS
+  string mobile_numbers = 7;    // Comma-separated mobile numbers
+  string entity_id = 8;         // Entity ID for DLT compliance
+  string template_id = 9;       // Template ID for the SMS
+  string message_type = 10;     // Type of the message (e.g., PM for promotional)
+}
+
+// The CreateSMSResponse message represents the structure of the response to an SMS request.
+message CreateSMSRequestHandlerResponse {
+  string communication_id = 1;   // Unique ID for the communication
+  string complete_response = 2; // Full response from the SMS gateway
+  string reference_id = 3;      // Reference ID for tracking
+  string response_code = 4;     // Status code of the response
+  string response_text = 5;     // Detailed response text
+}
+
+service SMSRequestService{
+    rpc CreateSMSRequestHandler(CreateSMSRequestHandlerRequest) returns (CreateSMSRequestHandlerResponse){}
+}
+

@@ -1,0 +1,135 @@
+AppName: message-gateway
+cache:
+  redisserver: localhost:6379
+  redispassword:
+  redisdbindex: 0
+  redisexpirationtime: 1m
+  lccapacity: 10000
+  lcnumshards: 20
+  lcttl: 2m
+  lcevictionpercentage: 10
+  lcminrefreshdelay: 15m
+  lcmaxrefreshdelay: 30m
+  lcretrybasedelay: 1s
+  lcbatchsize: 10
+  lcbatchbuffertimeout: 30s
+db:
+  username: "msggateway_rw_user" # change to your database username
+  password: "DoPrw@123" # change to your database password
+  host: "172.28.12.71" # change to your database host
+  port: "5432" # change to your database port
+  database: "msggatewaydb" # change to your database name
+  schema: "msggateway" # change to your database schema
+  # sslmode: "verify-full"
+  # searchpath: "msggateway" # change to your database schema
+  maxconns: 100
+  minconns: 1
+  maxconnlifetime: 30
+  maxconnidletime: 10
+  healthcheckperiod: 5
+  querytimeoutlow: 2s
+  querytimeoutmed: 5s
+info: ## This is the information that will be displayed in the swagger
+  name: "Message-Gateway"
+  version: "1.0.0"
+  description: "A comprehensive API for managing addresses, offering endpoints for creation, update, deletion, and retrieval of Message Gateway data"
+  title: "Message Gateway API"
+  terms: "https://example.com/terms"
+  email: "support_cept@indiapost.gov.in" ## This is the email address to contact the API maintainer and this reflects in swagger
+log:
+  level: "debug"
+  format: "json"
+  output: "stdout"
+client:
+  baseurl: "https://apiservices.cept.gov.in/bemsggateway/v1/sms-request"
+trace:
+  enabled: false #trace enable/disable
+  processor: 
+    type: "otlp-grpc"
+    options:
+      host: "localhost:4317"
+  sampler:
+    type: always-on
+    # type: parent-based-trace-id-ratio
+    options: 
+      ratio: 0.1
+metrics:
+  expose: true   #metrics enable/disable.
+  buckets: 
+  collect: 
+    build: true
+    go: true
+    process: true  
+    routes: true
+server:
+  servicename: "bemsggateway"
+  debug:
+    stats:
+      expose: true #stats enable/disable
+      path: "/debug/statsviz"
+    pprof:
+      expose: true #pprof enable/disable
+      path: "/debug/pprof"
+  dashboard:
+    Enabled: true #dashboard enable/disable
+  healthcheck:
+    expose: true #healthcheck enable/disable
+    path: "/healthzz"
+  bodylimit: 10485
+  readbuffersize: 16384
+  addr: ":8080"
+  readtimeout: 10s
+  writetimeout: 10s
+  timeout: 40 ## Over all timeout for the request
+  cors:
+    alloworigins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+    allowheaders:
+      - "Authorization"
+      - "Content-Type"
+      - "X-Request-Id"
+    allowmethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+
+sms:
+  dltEntityID: 1001081725895192800
+  msgstorerequest: 1
+
+  # max.characters in {#var#}
+  SMSvarLength: 60
+
+  #CDAC Configuration
+  cdac:
+    url: https://msdgweb.mgov.gov.in/esms/sendsmsrequestDLT
+    username: appostsms
+    password: dop123*
+    securekey: c7d427c9-63e7-4eec-a227-3ef840a75269
+    deliverystatusurl: https://msdgweb.mgov.gov.in/ReportAPI/csvreport
+  #NIC Configuration
+  nic:
+    url: https://smsgw.sms.gov.in/failsafe/HttpLink
+    #NIC INPOST credentials
+    INPOSTusername: speedpost.sms
+    INPOSTpassword: Ao@%231234
+    #NIC DOPBNK/DOPCBS credentials
+    DOPBNKusername: dop.sms
+    DOPBNKpassword: Ty@#123Qa
+    #NIC DOPPLI credentials
+    DOPPLIusername: doppli.sms
+    DOPPLIpassword: ospjox41
+    #NIC Multilingual Configuration (not working - need to check)
+    MultlingURL: https://smsgw.sms.gov.in/failsafe/MLink
+    #NIC BulkSMS configuration
+  bulk:
+    url: https://smsgw.sms.gov.in/failsafe/HttpData_MM
+    username: speedpost.sms
+    password: Ao@#1234
+  kafka:
+    url: http://10.20.30.22:8082/topics/messagegateway.public.message_request
+    schema: 1623
+

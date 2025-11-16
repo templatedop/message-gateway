@@ -1,0 +1,139 @@
+package handler
+
+import (
+	"strings"
+	gin "github.com/gin-gonic/gin"
+	gomail "gopkg.in/gomail.v2"
+	"crypto/tls"
+
+	repo "MgApplication/repo/postgres"
+	config "MgApplication/api-config"
+	apierrors "MgApplication/api-errors"
+	log "MgApplication/api-log"
+)
+
+// MailAlertHandler is a struct that contains the necessary dependencies for the MailAlertHandler
+type MailAlertHandler struct {
+	svc *repo.MgApplicationRepository
+	c   *config.Config
+}
+
+// NewMailAlertHandler is a function that returns a new instance of the MailAlertHandler
+func NewMailAlertHandler(svc *repo.MgApplicationRepository, c *config.Config) *MailAlertHandler {
+	return &MailAlertHandler{
+		svc,
+		c,
+	}
+}
+
+type mailAlert struct {
+	Subject       string                  `form:"subject" validate:"required" example:"Test Email"`
+	MessageText   string                  `form:"message_text" validate:"required" example:"Hello, This is a Test message"`
+	FromEmail     string                  `form:"from_mail"`
+	ToEmail       string                  `form:"to_mail" validate:"required" example:"test@xyz.com"`
+	CCEmail       string                  `form:"cc_mail"`
+	BCCEmail      string                  `form:"bcc_mail"`
+}
+
+// SendMailAlert is a function that sends an email alert
+func (ch *MgApplicationHandler) CreateMailRequestHandler(ctx *gin.Context) {
+
+	var req mailAlert
+
+	req.Subject = ch.c.GetString("email.Subject")
+	req.MessageText = ch.c.GetString("email.MessageText")
+	req.FromEmail = ch.c.GetString("email.FromEmail")
+	req.ToEmail = ch.c.GetString("email.ToEmail")
+	req.CCEmail = ch.c.GetString("email.CCEmail")
+	req.BCCEmail = ch.c.GetString("email.BCCEmail")
+
+	emails := []string{req.ToEmail, req.CCEmail, req.BCCEmail}
+
+			var rsp string = ""
+			for _, email := range emails {
+				temprsp, err := ch.SendEmailGmail(ctx, email, req.CCEmail, req.BCCEmail, req.Subject, req.MessageText, attachments)
+				if err != nil {
+					mailresponse := domain.MailResponse{
+						CommunicationID:  mailappreq.CommunicationID,
+						CompleteResponse: temprsp,
+						ResponseCode:     "02",
+						ResponseText:     err.Error(),
+						ReferenceID:      "",
+					}
+
+					_, _ = ch.svc.MailSaveResponse(ctx, &mailresponse)
+
+					return
+				}
+				rsp = rsp + ", " + temprsp
+			}
+
+			mailresponse := domain.MailResponse{
+				CommunicationID:  mailappreq.CommunicationID,
+				CompleteResponse: rsp,
+				ResponseCode:     "01",
+				ResponseText:     "Email Submitted Successfully",
+				ReferenceID:      "",
+			}
+			_, _ = ch.svc.SaveResponse(ctx, &mailresponse)
+			// handleSuccess(ctx, mailresponse)
+			mailrsp := response.NewCreateMailResponse(&mailresponse)
+			apiRsp := response.CreateMailAPIResponse{
+				StatusCodeAndMessage: port.CreateSuccess,
+				Data:                 mailrsp,
+			}
+
+			log.Debug(ctx, "CreateMailRequestHandler response: %s", apiRsp)
+			handleCreateSuccess(ctx, apiRsp)
+			return
+}
+
+//need a handler to send email using SendEmailGmail function when the number of messages to any particular mobile number is more than 10 in one hour, this number of messages is counted from msg_request table in database
+//need to create a function to count the number of messages to a particular mobile number in one hour
+//need to create a function to send email using SendEmailGmail function
+
+func (ch *MgApplicationHandler) SendEmailGmail(ctx *gin.Context, ToEmail string, CCEmail string, BCCEmail string, Subject string, MessageText string) (string, error) {
+	smtpHost := ch.c.GetString("gmail.host")
+	smtpPort := ch.c.GetInt("gmail.port")
+	smtpUsername := ch.c.GetString("gmail.username")
+	smtpPassword := ch.c.GetString("gmail.password")
+	fromEmail := ch.c.GetString("gmail.FromEMail")
+	log.Debug(ctx, "SMTP Host: %s, SMTP Port: %d, SMTP Username: %s, SMTP Password: %s, From Email: %s", smtpHost, smtpPort, smtpUsername, smtpPassword, fromEmail)
+	
+	toEmail := ToEmail
+	ccEmail := CCEmail
+	bccEmail := BCCEmail
+	subjectEmail := Subject
+	MessageEmail := MessageText
+	
+	m := gomail.NewMessage()
+	m.SetHeader("From", fromEmail)
+	m.SetHeader("To", toEmail)
+	if ccEmail != "" {
+		m.SetAddressHeader("Cc", ccEmail, "")
+	}
+	if bccEmail != "" {
+		m.SetAddressHeader("Bcc", bccEmail, "")
+	}
+
+	m.SetHeader("Subject", subjectEmail)
+	m.SetBody("text/html", MessageEmail)
+	
+
+	d := gomail.NewDialer(smtpHost, smtpPort, smtpUsername, smtpPassword)
+
+	// Optionally set TLS configuration
+	d.TLSConfig = &tls.Config{
+		InsecureSkipVerify: false, // Ensure TLS verification is enabled
+		ServerName:         smtpHost,
+	}
+
+	// Set up the SMTP client
+	if err := d.DialAndSend(m); err != nil {
+		log.Error(ctx, "Error in SendMail function: %s", err.Error())
+		apierrors.HandleErrorWithStatusCodeAndMessage(ctx, apierrors.HTTPErrorBadGateway, "Error in Gmail DialandSend function: ", err)
+		return "Error Dialing Email", err
+	}
+	
+	return "Email Sent Successfully", nil
+}

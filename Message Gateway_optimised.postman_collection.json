@@ -1,0 +1,1001 @@
+{
+	"info": {
+		"_postman_id": "ea0d76af-832d-4a74-89e8-93563ec5d47a",
+		"name": "Message Gateway_optimised",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30282322"
+	},
+	"item": [
+		{
+			"name": "Applications",
+			"item": [
+				{
+					"name": "Create Message Application",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"application_name\": \"New Application Jathin245\",\r\n  \"request_type\": \"4\",\r\n  \"status\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Message Applications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Message Application by ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications?application-id=21",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications"
+							],
+							"query": [
+								{
+									"key": "application-id",
+									"value": "21"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Message Application",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n//   \"application_id\": 37,\r\n  \"application_name\": \"New Application\",\r\n  \"request_type\": \"4\",\r\n  \"status\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications/37",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications",
+								"37"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Status Toggler Message Application",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications/2/status",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications",
+								"2",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Applications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/applications?status=true",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"applications"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SMS-Providers",
+			"item": [
+				{
+					"name": "Create Message Provider",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"provider_name\": \"New Provider Jathin2445\",\r\n  \"short_name\": \"NPJ2\",\r\n  \"services\": \"1,3,4\",\r\n  \"status\": true,\r\n  \"configuration_keys\": \"[{\\\"keyname\\\":\\\"key1\\\",\\\"keyvalue\\\":\\\"key_value1\\\"},{\\\"keyname\\\":\\\"key2\\\",\\\"keyvalue\\\":\\\"key_value2\\\"},{\\\"keyname\\\":\\\"key3\\\",\\\"keyvalue\\\":\\\"key_value3\\\"},{\\\"keyname\\\":\\\"key4\\\",\\\"keyvalue\\\":\\\"key_value4\\\"}]\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Message Providers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Provider by ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers?provider-id=3",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers"
+							],
+							"query": [
+								{
+									"key": "provider-id",
+									"value": "3"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Message Provider",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"provider_name\": \"Jathin\",\r\n  \"services\": \"2,3,4\",\r\n  \"status\": true\r\n//   \"provider_id\": 31\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers/31",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers",
+								"31"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Status Toggler Message Provider",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers/3/status",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers",
+								"3",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Providers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-providers/get?status=true",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-providers",
+								"get"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SMS Templates",
+			"item": [
+				{
+					"name": "Maintain Template",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"application_id\":  \"69\",\r\n    \"template_name\":   \"Test Template 1233\",\r\n    \"template_format\":  \"Your OTP is {#val} for {#val}\",\r\n    \"sender_id\":       \"INPOST\",\r\n    \"entity_id\":     \"\",\r\n    \"template_id\":  \"16507160377410448739\",\r\n    \"message_type\":\"PM\",\r\n    \"gateway\":         \"1\",\r\n    \"status\":          true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates?skip=1&limit=10",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Status Toggler Template",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/2/status",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"2",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Template by ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/312",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"312"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Template names by App ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/name?application-id=10",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"name"
+							],
+							"query": [
+								{
+									"key": "application-id",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit Template",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n\"status\": true,\r\n\"gateway\": \"1\",\r\n\"template_id\": \"1007040813066594767\",\r\n\"entity_id\": \"1001081725895192800\",\r\n\"sender_id\": \"DOPBNK\",\r\n\"template_format\": \"Standing Instruction {#var#} on Account No {#var#} was cancelled on {#var#}.\",\r\n\"template_name\": \"Std. Instruction CANCELLATION \",\r\n\"application_id\": \"2\",\r\n\"message_type\":\"UC\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/2",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "template details by query",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/details?application-id=10",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"details"
+							],
+							"query": [
+								{
+									"key": "application-id",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "template details by template local id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/details?template-local-id=10",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"details"
+							],
+							"query": [
+								{
+									"key": "template-local-id",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "template details by template format",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-templates/details?template-format=Article No. {%23var%23} Out for delivery through {%23var%23} on {%23var%23}. Use OTP {%23var%23} at the time of Delivery - INDIA POST",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-templates",
+								"details"
+							],
+							"query": [
+								{
+									"key": "template-format",
+									"value": "Article No. {#var#} Out for delivery through {#var#} on {#var#}. Use OTP {#var#} at the time of Delivery - INDIA POST"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bulk SMS",
+			"item": [
+				{
+					"name": "Initiate Bulk SMS",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"application_id\": \"4\",\r\n  \"template_name\": \"490\",\r\n  \"mobile_no\": \"9634294395\",\r\n  \"message_type\":\"PM\",\r\n  \"test_msg\": \"Dear priyatham, OTP for testing is 12345. Don't share it with anyone - INDIAPOST\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "127.0.0.1:8080/v1/bulk-sms-initiate",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"bulk-sms-initiate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Test SMS",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "127.0.0.1:8080/v1/bulk-sms-validate-otp?reference-id= 4iq3zb8hzfaod8srftch&test-string= 12345",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"bulk-sms-validate-otp"
+							],
+							"query": [
+								{
+									"key": "reference-id",
+									"value": " 4iq3zb8hzfaod8srftch"
+								},
+								{
+									"key": "test-string",
+									"value": " 12345"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "send file",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n    {\r\n        \"mobile_number\": \"90000000\",\r\n        \"message_text\": \"Dear Candidate, please login to testvar1 to download Your Admit Card for testvar5 - INDIAPOST\",\r\n        \"sender_id\": \"INPOST\",\r\n        \"template_id\": \"1007441579539105995\",\r\n        \"entity_id\": \"1001081725895192800\",\r\n        \"message_type\": \"PM\"\r\n    },\r\n    {\r\n        \"mobile_number\": \"9000000001\",\r\n        \"message_text\": \"Dear Candidate, please login to testvar2 to download Your Admit Card for testvar6 - INDIAPOST\",\r\n        \"sender_id\": \"INPOST\",\r\n        \"template_id\": \"1007441579539105995\",\r\n        \"entity_id\": \"1001081725895192800\",\r\n        \"message_type\": \"PM\"\r\n    },\r\n    {\r\n        \"mobile_number\": \"9000000002\",\r\n        \"message_text\": \"Dear Candidate, please login to testvar3 to download Your Admit Card for testvar7 - INDIAPOST\",\r\n        \"senderID\": \"INPOST\",\r\n        \"template_id\": \"1007441579539105995\",\r\n        \"entity_id\": \"1001081725895192800\",\r\n        \"message_type\": \"PM\"\r\n    }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/v1/bulk-sms",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"bulk-sms"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Aggregate SMS Report",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "127.0.0.1:8080/v1/aggregate-sms-report?from-date= 01-01-2024&to-date= 02-09-2024&report-type=3",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"aggregate-sms-report"
+							],
+							"query": [
+								{
+									"key": "from-date",
+									"value": " 01-01-2024"
+								},
+								{
+									"key": "to-date",
+									"value": " 02-09-2024"
+								},
+								{
+									"key": "report-type",
+									"value": "3"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dashboard Data",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "127.0.0.1:8080/v1/sms-dashboard",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SMS Sent status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "127.0.0.1:8080/v1/sms-sent-status-report?from-date=01-01-2024&to-date=02-08-2024",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-sent-status-report"
+							],
+							"query": [
+								{
+									"key": "from-date",
+									"value": "01-01-2024"
+								},
+								{
+									"key": "to-date",
+									"value": "02-08-2024"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Msg Request",
+			"item": [
+				{
+					"name": "Test Message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{   \r\n    // \"application_id\":\"4\",\r\n\t// \"facility_id\":\"facility1\",\r\n\t// \"priority\":1,\r\n\t// \"message_text\":\"Your OTP is : 123 for xyz. Please keep it for further references\",\r\n\t// \"sender_id\":\"APPOST\",\r\n\t// \"mobile_numbers\":\"9494931831\",\r\n\t// \"entity_id\":\"\",\r\n\t// \"template_id\":\"1307160377410448739\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/test-sms-request",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"test-sms-request"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Message Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{   \"application_id\":\"4\",\r\n\t\"facility_id\":\"facility1\",\r\n\t\"priority\":1,\r\n\t\"message_text\":\"Your OTP is : 342789 for Account_Creation. Please keep it for further references\",\r\n\t\"sender_id\":\"APPOST\",\r\n\t\"mobile_numbers\":\"9634294395\",\r\n\t\"entity_id\":\"\",\r\n\t\"template_id\":\"1307160377410448739\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8080/v1/sms-request",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"sms-request"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

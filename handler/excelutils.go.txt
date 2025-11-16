@@ -1,0 +1,263 @@
+package handler
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
+)
+
+// isValidExtension checks if the file has a valid extension (.xls or .xlsx)
+func isValidExtension(filePath string) bool {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	return ext == ".xls" || ext == ".xlsx"
+}
+
+// isRowEmpty checks if a row is empty
+func isRowEmpty(row []string) bool {
+	for _, cell := range row {
+		if cell != "" {
+			return false
+		}
+	}
+	return true
+}
+
+// countPlaceholders counts the number of {#var#} placeholders in the template string
+func countPlaceholders(template string) int {
+	return strings.Count(template, "{#var#}")
+}
+
+func isValidMobileNumber(mobileNumber string) bool {
+	// Ensure the resulting number is exactly 10 digits long and starts with a digit between 6 and 9
+	re := regexp.MustCompile(`^[6-9]\d{9}$`)
+	return re.MatchString(mobileNumber)
+}
+
+func isValidvarValue(varValue string) bool {
+	// Ensure the varValue is not empty and has a maximum of 60 characters
+	return len(varValue) > 0 && len(varValue) <= 60
+}
+
+func containsMaliciousPattern(cell string) bool {
+	// Check for executable commands or suspicious formulas
+	// if strings.Contains(cell, "=") {
+	//     return true // Cell contains a formula
+	// }
+
+	// Check for known suspicious patterns
+	suspiciousPatterns := []string{"cmd.exe", "powershell", "exec("}
+	for _, pattern := range suspiciousPatterns {
+		if strings.Contains(cell, pattern) {
+			return true // Cell contains a suspicious pattern
+		}
+	}
+
+	return false // No malicious patterns found
+}
+
+// Validate headers in the first row
+func validateHeaderRow(headerRow []string) error {
+	// Check if the first cell contains "mobile_no"
+	if len(headerRow) == 0 || headerRow[0] != "mobile_no" {
+		return fmt.Errorf("the header row must start with 'mobile_no'")
+	}
+
+	// Optionally: Check if there are no other invalid headers if needed
+	// For this case, we don't need to validate other columns
+
+	return nil
+}
+
+// ReadExcelFile reads the content of an Excel file and returns the rows as a slice of slices of strings
+func ReadExcelFile(filePath string, expectedColumns ...int) ([][]string, error) {
+	// Validate file extension
+	if !isValidExtension(filePath) {
+		return nil, fmt.Errorf("invalid file extension, only .xls and .xlsx are supported")
+	}
+
+	// Define maximum file size (10 MB in this example)
+	const maxFileSize = 10 * 1024 * 1024 // 10 MB
+
+	// Get file size
+	fileStat, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file information: %v", err)
+	}
+
+	// Check file size against maximum limit
+	if fileStat.Size() > maxFileSize {
+		return nil, fmt.Errorf("the Excel file exceeds the maximum allowed size of 10 MB")
+	}
+
+	// Open the Excel file
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open Excel file: %v", err)
+	}
+
+	// Validate only one sheet
+	sheets := f.GetSheetList()
+	if len(sheets) != 1 {
+		return nil, fmt.Errorf("the Excel file must contain exactly one sheet")
+	}
+
+	// Get the rows from the first sheet
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rows from sheet: %v", err)
+	}
+
+	// Validate the number of rows does not exceed 10,000
+	if len(rows) > 10000 {
+		return nil, fmt.Errorf("the Excel file must not contain more than 10,000 rows")
+	}
+
+	// Validate header in the first row
+	if len(rows) == 0 || len(rows[0]) == 0 {
+		return nil, fmt.Errorf("the Excel file must have a header row in the first sheet")
+	}
+
+	// Validate number of columns if expectedColumns is provided
+	if len(expectedColumns) == 1 {
+		expected := expectedColumns[0]
+		// Validate the file has the expected number of columns
+		if len(rows) > 0 && len(rows[0]) != expected {
+			//handleError(c, fmt.Sprintf("expected %d columns in the header row, but found %d", expectedColumns, len(rows[0])))
+			return nil, fmt.Errorf("expected %d columns (incl. mobile_no) in the header row, but found %d", expected, len(rows[0]))
+		}
+
+		// Validate the header row
+		if err := validateHeaderRow(rows[0]); err != nil {
+			return nil, err
+		}
+
+		// Validate no blank rows or columns in between
+		for i, row := range rows {
+
+			// check empty rows
+			if isRowEmpty(row) {
+				return nil, fmt.Errorf("the Excel file contains blank rows at rows at row %d", i+1)
+			}
+			// // Validate no blank columns in between
+			// for j, cell := range row {
+			// 	if cell == "" {
+			// 		return nil, fmt.Errorf("the Excel file contains blank columns in row %d at column %d", i+1, j+1)
+			// 	}
+
+			// Scan cell contents for potentially harmful commands or patterns
+			//     if containsMaliciousPattern(cell) {
+			//         return nil, fmt.Errorf("the Excel file contains potentially malicious content")
+			//     }
+			// }
+
+			// Ensure no cells are empty
+			for j := 0; j < expected; j++ {
+				// Check if the column index exceeds the current row length or if the cell is empty
+				if j >= len(row) || row[j] == "" {
+					return nil, fmt.Errorf("the Excel file contains a blank cell in row %d at column %d", i+1, j+1)
+				}
+
+				// Scan cell contents for potentially harmful commands or patterns
+				if containsMaliciousPattern(row[j]) {
+					return nil, fmt.Errorf("the Excel file contains potentially malicious content")
+				}
+			}
+
+		}
+
+	} else if len(expectedColumns) > 1 {
+		return nil, fmt.Errorf("too many arguments for expectedColumns, expected 0 or 1, got %d", len(expectedColumns))
+	}
+
+	return rows, nil
+}
+
+func ProcessExcelFile(c *gin.Context, inputFilePath, outputFilePath, templateString string, ch *MgApplicationHandler) ([][]string, string, error) {
+
+	// Calculate expected columns based on the template
+	expectedColumns := countPlaceholders(templateString) + 1 // +1 for Mobile Number
+
+	// Read and validate the input Excel file
+	rows, err := ReadExcelFile(inputFilePath, expectedColumns)
+	if err != nil {
+		handleError(c, err.Error())
+		return nil, "", err
+	}
+
+	// Retrieve template ID from database using handler method
+	// templateID, err := ch.getTemplateID(nil, templateString)
+	// if err != nil {
+	// 	ch.log.Error(fmt.Sprintf("Failed to fetch template ID: %v", err))
+	// 	handleError(c, fmt.Sprintf("Failed to fetch template ID: %v", err))
+	// 	return nil, "", err
+	// }
+
+	// Process each row and generate the output file
+	var result [][]string
+	//result = append(result, []string{"Mobile Number", "Message", "Template ID"})
+	result = append(result, []string{"Mobile Number", "Message"})
+	for i, row := range rows {
+		if i == 0 {
+			continue
+		}
+
+		// Assuming the first column is the mobile number and the rest are values to be replaced in the template
+		// Validate mobile number
+		mobileNumber := row[0]
+		// Remove spaces, hyphens, and the "+91" prefix if present
+		mobileNumber = strings.ReplaceAll(mobileNumber, " ", "")
+		mobileNumber = strings.ReplaceAll(mobileNumber, "-", "")
+		mobileNumber = strings.TrimPrefix(mobileNumber, "+91")
+		if !isValidMobileNumber(mobileNumber) {
+			errorMessage := fmt.Sprintf("Invalid mobile number at row %d: %s", i+1, mobileNumber)
+			handleError(c, errorMessage)
+			return nil, "", fmt.Errorf(errorMessage)
+		}
+
+		varValues := row[1:]
+
+		// Check each varValue for validity(to be refined)
+		for j, varValue := range varValues {
+			if !isValidvarValue(varValue) {
+				errorMessage := fmt.Sprintf("Invalid var value at row %d, column %d: %s", i+1, j+1, varValue)
+				handleError(c, errorMessage)
+				return nil, "", fmt.Errorf(errorMessage)
+			}
+		}
+
+		message := templateString
+
+		// Replace placeholders with corresponding values from the Excel file
+		for _, val := range varValues {
+			message = strings.Replace(message, "{#var#}", val, 1)
+		}
+
+		//result = append(result, []string{mobileNumber, message, templateID})
+		result = append(result, []string{mobileNumber, message})
+	}
+
+	// Create and save the output Excel file
+	outFile := excelize.NewFile()
+	sheetName := "Sheet1"
+
+	// Write results to the output Excel file
+	for i, row := range result {
+		for j, cell := range row {
+			cellName, _ := excelize.CoordinatesToCellName(j+1, i+1)
+			outFile.SetCellValue(sheetName, cellName, cell)
+		}
+	}
+
+	// Save the output Excel file
+	if err := outFile.SaveAs(outputFilePath); err != nil {
+		handleError(c, fmt.Sprintf("failed to save Excel file: %v", err))
+		return nil, "", err
+	}
+
+	return result, outputFilePath, nil
+}

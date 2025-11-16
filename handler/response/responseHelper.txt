@@ -1,0 +1,23 @@
+package response
+
+type StatusCodeAndMessage struct {
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
+}
+
+type MetaDataResponse struct {
+	Skip                 uint64    `json:"skip,default=0"`
+	Limit                uint64    `json:"limit,default=10"`
+	OrderBy              string `json:"order_by,omitempty"`
+	SortType             string `json:"sort_type,omitempty"`
+	TotalRecordsCount    int    `json:"total_records_count,omitempty"`
+	ReturnedRecordsCount int    `json:"returned_records_count"`
+}
+
+func NewMetaDataResponse(skip uint64, limit uint64, total int) MetaDataResponse {
+	return MetaDataResponse{
+		Skip:                 skip,
+		Limit:                limit,
+		ReturnedRecordsCount: total,
+	}
+}

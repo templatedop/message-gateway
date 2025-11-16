@@ -1,0 +1,140 @@
+package bootstrap
+
+import (
+	"context"
+	"net/http"
+	"testing"
+	"time"
+
+	config "MgApplication/api-config"
+	"MgApplication/apitemplate/router"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
+)
+
+type mockRouter struct {
+	startErr    error
+	shutdownErr error
+}
+
+func (m *mockRouter) Start() error {
+	return m.startErr
+}
+
+func (m *mockRouter) Shutdown(ctx context.Context) error {
+	return m.shutdownErr
+}
+
+func TestStartServer(t *testing.T) {
+	tests := []struct {
+		name        string
+		startErr    error
+		shutdownErr error
+		expectErr   bool
+	}{
+		{
+			name:        "successful start and shutdown",
+			startErr:    nil,
+			shutdownErr: nil,
+			expectErr:   false,
+		},
+		{
+			name:        "start error",
+			startErr:    http.ErrServerClosed,
+			shutdownErr: nil,
+			expectErr:   true,
+		},
+		{
+			name:        "shutdown error",
+			startErr:    nil,
+			shutdownErr: context.DeadlineExceeded,
+			expectErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fxtest.New(
+				t,
+				fx.Provide(func() *router.Router {
+					return &router.Router{
+						Router: &mockRouter{
+							startErr:    tt.startErr,
+							shutdownErr: tt.shutdownErr,
+						},
+					}
+				}),
+				fx.Invoke(startServer),
+			)
+
+			startCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if err := app.Start(startCtx); (err != nil) != tt.expectErr {
+				t.Errorf("app.Start() error = %v, expectErr %v", err, tt.expectErr)
+			}
+
+			stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if err := app.Stop(stopCtx); (err != nil) != tt.expectErr {
+				t.Errorf("app.Stop() error = %v, expectErr %v", err, tt.expectErr)
+			}
+		})
+	}
+}
+func TestCacheInit(t *testing.T) {
+	tests := []struct {
+		name      string
+		config    *config.Config
+		expectErr bool
+	}{
+		{
+			name: "successful cache initialization",
+			config: &config.Config{
+				// Mock configuration values
+				"cache.redisserver":          "localhost:6379",
+				"cache.redispassword":        "",
+				"cache.redisdbindex":         0,
+				"cache.lccapacity":           100,
+				"cache.lcnumshards":          10,
+				"cache.lcbatchsize":          20,
+				"cache.lcbatchbuffertimeout": 100 * time.Millisecond,
+				"cache.lcevictionpercentage": 10,
+				"cache.lcmaxrefreshdelay":    1 * time.Minute,
+				"cache.lcminrefreshdelay":    10 * time.Second,
+				"cache.lcretrybasedelay":     1 * time.Second,
+				"cache.lcttl":                5 * time.Minute,
+			},
+			expectErr: false,
+		},
+		{
+			name: "failed cache initialization",
+			config: &config.Config{
+				// Mock configuration values with invalid redis server
+				"cache.redisserver":          "invalid:6379",
+				"cache.redispassword":        "",
+				"cache.redisdbindex":         0,
+				"cache.lccapacity":           100,
+				"cache.lcnumshards":          10,
+				"cache.lcbatchsize":          20,
+				"cache.lcbatchbuffertimeout": 100 * time.Millisecond,
+				"cache.lcevictionpercentage": 10,
+				"cache.lcmaxrefreshdelay":    1 * time.Minute,
+				"cache.lcminrefreshdelay":    10 * time.Second,
+				"cache.lcretrybasedelay":     1 * time.Second,
+				"cache.lcttl":                5 * time.Minute,
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := CacheInit(tt.config)
+			if (cache == nil) != tt.expectErr {
+				t.Errorf("CacheInit() error = %v, expectErr %v", cache == nil, tt.expectErr)
+			}
+		})
+	}
+}

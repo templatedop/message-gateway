@@ -1,0 +1,2529 @@
+basePath: /v1
+definitions:
+  apierrors.APIErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/apierrors.AppError'
+      message:
+        description: Descriptive message providing details about the error.
+        type: string
+      status_code:
+        description: HTTP status code representing the error type (e.g., 404 for Not
+          Found).
+        type: integer
+      success:
+        description: Success flag to indicate if the operation was successful.
+        type: boolean
+    type: object
+  apierrors.AppError:
+    properties:
+      code:
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/apierrors.FieldError'
+        type: array
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  apierrors.FieldError:
+    properties:
+      field:
+        type: string
+      message:
+        type: string
+      value: {}
+    type: object
+  handler.createMessageApplicationRequest:
+    properties:
+      application_id:
+        type: integer
+      application_name:
+        example: Test Application
+        type: string
+      request_type:
+        example: "1"
+        type: string
+      status:
+        example: true
+        type: boolean
+    required:
+    - application_name
+    - request_type
+    - status
+    type: object
+  handler.createMessageProviderRequest:
+    properties:
+      configuration_keys:
+        example: '[{"keyname":"key1","keyvalue":"keyvalue1"},{"keyname":"key2","keyvalue":"keyvalue2"}]'
+        type: string
+      provider_name:
+        example: Test Provider
+        type: string
+      services:
+        example: 1,2,3,4
+        type: string
+      short_name:
+        example: TP
+        type: string
+      status:
+        description: ConfigurationKeys interface{} `json:"configuration_keys" validate:"required"`
+        example: true
+        type: boolean
+    required:
+    - configuration_keys
+    - provider_name
+    - services
+    - short_name
+    - status
+    type: object
+  handler.createSMSRequest:
+    properties:
+      application_id:
+        example: "4"
+        type: string
+      entity_id:
+        example: "1301157641566214705"
+        type: string
+      facility_id:
+        example: facility1
+        type: string
+      message_text:
+        example: 'Your OTP is : 1342789 for Account_Creation. Please keep it for further
+          references'
+        type: string
+      message_type:
+        example: PM
+        type: string
+      mobile_numbers:
+        example: "9000000000"
+        type: string
+      priority:
+        example: 1
+        type: integer
+      reqid:
+        type: integer
+      sender_id:
+        example: INPOST
+        type: string
+      template_id:
+        example: "1307160377410448739"
+        type: string
+    required:
+    - application_id
+    - facility_id
+    - message_text
+    - mobile_numbers
+    - priority
+    - sender_id
+    - template_id
+    type: object
+  handler.createTemplateRequest:
+    properties:
+      application_id:
+        example: "4"
+        type: string
+      entity_id:
+        example: "1001051725995192803"
+        type: string
+      gateway:
+        example: "1"
+        type: string
+      message_type:
+        example: PM
+        type: string
+      sender_id:
+        example: INPOST
+        type: string
+      status:
+        example: true
+        type: boolean
+      template_format:
+        example: Dear {#var#}, Greetings from India Post on the occasion of {#var#}
+          - Indiapost
+        type: string
+      template_id:
+        example: "1007188452935484904"
+        type: string
+      template_local_id:
+        type: integer
+      template_name:
+        example: Test Template
+        type: string
+    required:
+    - application_id
+    - gateway
+    - message_type
+    - sender_id
+    - status
+    - template_format
+    - template_id
+    - template_name
+    type: object
+  handler.createTestSMSRequest:
+    properties:
+      mobile_number:
+        description: Mobile number as request parameter
+        type: string
+    required:
+    - mobile_number
+    type: object
+  handler.initiateBulkSMSRequest:
+    properties:
+      application_id:
+        example: "4"
+        type: string
+      entity_id:
+        type: string
+      file_id:
+        type: integer
+      isverified:
+        type: integer
+      messsage_type:
+        type: string
+      mobile_no:
+        example: "9000000000"
+        type: string
+      reference_id:
+        type: string
+      sender_id:
+        type: string
+      template_id:
+        type: string
+      template_name:
+        example: "355"
+        type: string
+      test_msg:
+        example: 'Your Transaction is Successful. Your Order No is 906627, booked
+          on : 180261'
+        type: string
+    required:
+    - application_id
+    - mobile_no
+    - template_name
+    - test_msg
+    type: object
+  handler.sendBulkSMSRequest:
+    properties:
+      entity_id:
+        type: string
+      message_text:
+        type: string
+      message_type:
+        type: string
+      mobile_number:
+        type: string
+      sender_id:
+        type: string
+      template_id:
+        type: string
+    required:
+    - entity_id
+    - message_text
+    - message_type
+    - mobile_number
+    - sender_id
+    - template_id
+    type: object
+  handler.updateMessageApplicationRequest:
+    properties:
+      application_name:
+        example: Test Application
+        type: string
+      request_type:
+        example: "1"
+        type: string
+      status:
+        example: true
+        type: boolean
+    required:
+    - application_name
+    - request_type
+    - status
+    type: object
+  handler.updateMessageProviderRequest:
+    properties:
+      configuration_keys:
+        items:
+          type: integer
+        type: array
+      provider_name:
+        example: Test Provider
+        type: string
+      services:
+        example: 1,2,3,4
+        type: string
+      status:
+        example: true
+        type: boolean
+    required:
+    - provider_name
+    - services
+    - status
+    type: object
+  handler.updateTemplateRequest:
+    properties:
+      application_id:
+        example: "4"
+        type: string
+      entity_id:
+        type: string
+      gateway:
+        example: "1"
+        type: string
+      message_type:
+        example: PM
+        type: string
+      sender_id:
+        example: INPOST
+        type: string
+      status:
+        example: true
+        type: boolean
+      template_format:
+        example: Standing Instruction {#var#} on Account No {#var#} was cancelled.
+        type: string
+      template_id:
+        example: "1007002656392643880"
+        type: string
+      template_name:
+        example: Std. Instruction CANCELLATION
+        type: string
+    required:
+    - application_id
+    - gateway
+    - message_type
+    - sender_id
+    - status
+    - template_format
+    - template_id
+    - template_name
+    type: object
+  response.AggregateSMSReportAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.aggregateSMSReportResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.BulkSMSInitiateAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.bulkSMSInitiateResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.CreateMsgApplicationAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.createMsgApplicationResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.CreateSMSAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.createSMSResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.CreateSMSProviderAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.createSMSProviderResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.CreateTemplateAPIResponse:
+    properties:
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.FetchMsgApplicationAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.fetchMsgApplicationResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.FetchSMSProviderAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.fetchSMSProviderResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.FetchTemplateAPIResponse:
+    properties:
+      data:
+        description: MetaDataResponse     `json:",inline"`
+        items:
+          $ref: '#/definitions/response.fetchTemplateResponse'
+        type: array
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.FetchTemplateDetailsAPIResponse:
+    properties:
+      data:
+        description: MetaDataResponse     `json:",inline"`
+        items:
+          $ref: '#/definitions/response.fetchTemplateDetailsResponse'
+        type: array
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.FetchTemplateNameAPIResponse:
+    properties:
+      data:
+        description: MetaDataResponse     `json:",inline"`
+        items:
+          $ref: '#/definitions/response.fetchTemplateNameResponse'
+        type: array
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.ListMsgApplicationsAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.listMsgApplicationsResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.ListSMSProvidersAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.listSMSProvidersResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.ListTemplatesAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.listTemplatesResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.SMSDashboardAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.smsDashboardResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.SMSSentStatusReportAPIResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/response.smsSentStatusReportResponse'
+        type: array
+      limit:
+        type: integer
+      message:
+        type: string
+      order_by:
+        type: string
+      returned_records_count:
+        type: integer
+      skip:
+        type: integer
+      sort_type:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+      total_records_count:
+        type: integer
+    type: object
+  response.SendBulkSMSAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.sendBulkSMSResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.TestSMSAPIResponse:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.ToggleAppStatusAPIResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.ToggleProviderStatusAPIResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.ToggleTemplateStatusAPIResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.UpdateMsgApplicationAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.updateMsgApplicationResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.UpdateSMSProviderAPIResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.updateSMSProviderResponse'
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.UpdateTemplatesAPIResponse:
+    properties:
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.ValidateBulkSMSOTPAPIResponse:
+    properties:
+      data:
+        type: boolean
+      message:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  response.aggregateSMSReportResponse:
+    properties:
+      application_name:
+        type: string
+      created_date:
+        type: string
+      failed:
+        type: integer
+      provider_name:
+        type: string
+      serial_no:
+        type: integer
+      success:
+        type: integer
+      template_name:
+        type: string
+      total_sms:
+        type: integer
+    type: object
+  response.bulkSMSInitiateResponse:
+    properties:
+      msgResponse:
+        type: string
+      referenceID:
+        type: string
+    type: object
+  response.createMsgApplicationResponse:
+    properties:
+      application_id:
+        type: integer
+      application_name:
+        type: string
+      created_date:
+        type: string
+      request_type:
+        type: string
+      secret_key:
+        type: string
+      status:
+        type: integer
+      updated_date:
+        type: string
+    type: object
+  response.createSMSProviderResponse:
+    properties:
+      configuration_keys:
+        items:
+          type: integer
+        type: array
+      provider_id:
+        type: integer
+      provider_name:
+        type: string
+      services:
+        type: string
+      short_name:
+        type: string
+      status:
+        description: ConfigurationKeys interface{} `json:"configuration_keys" db:"configuration_key"`
+        type: integer
+    type: object
+  response.createSMSResponse:
+    properties:
+      communication_id:
+        type: string
+      complete_response:
+        type: string
+      referenceID:
+        type: string
+      response_text:
+        type: string
+      status:
+        type: string
+    type: object
+  response.fetchMsgApplicationResponse:
+    properties:
+      application_id:
+        type: integer
+      application_name:
+        type: string
+      request_type:
+        type: string
+      status:
+        type: integer
+    type: object
+  response.fetchSMSProviderResponse:
+    properties:
+      configuration_keys:
+        items:
+          type: integer
+        type: array
+      provider_id:
+        type: integer
+      provider_name:
+        type: string
+      services:
+        type: string
+      short_name:
+        type: string
+      status:
+        description: ConfigurationKeys interface{} `json:"configuration_keys" db:"configuration_key"`
+        type: integer
+    type: object
+  response.fetchTemplateDetailsResponse:
+    properties:
+      entity_id:
+        type: string
+      message_type:
+        type: string
+      sender_id:
+        type: string
+      template_format:
+        type: string
+      template_id:
+        type: string
+      template_local_id:
+        type: integer
+      template_name:
+        type: string
+    type: object
+  response.fetchTemplateNameResponse:
+    properties:
+      template_local_id:
+        type: integer
+      template_name:
+        type: string
+    type: object
+  response.fetchTemplateResponse:
+    properties:
+      application_id:
+        type: string
+      entity_id:
+        type: string
+      gateway:
+        type: string
+      message_type:
+        type: string
+      sender_id:
+        type: string
+      status:
+        type: integer
+      template_format:
+        type: string
+      template_id:
+        type: string
+      template_local_id:
+        type: integer
+      template_name:
+        type: string
+      totalCount:
+        type: integer
+    type: object
+  response.listMsgApplicationsResponse:
+    properties:
+      application_id:
+        type: integer
+      application_name:
+        type: string
+      request_type:
+        type: string
+      status:
+        type: integer
+    type: object
+  response.listSMSProvidersResponse:
+    properties:
+      configuration_keys:
+        items:
+          type: integer
+        type: array
+      provider_id:
+        type: integer
+      provider_name:
+        type: string
+      services:
+        type: string
+      short_name:
+        type: string
+      status:
+        description: ConfigurationKeys interface{} `json:"configuration_keys" db:"configuration_key"`
+        type: integer
+    type: object
+  response.listTemplatesResponse:
+    properties:
+      application_id:
+        type: string
+      entity_id:
+        type: string
+      gateway:
+        type: string
+      message_type:
+        type: string
+      sender_id:
+        type: string
+      status:
+        type: integer
+      template_format:
+        type: string
+      template_id:
+        type: string
+      template_local_id:
+        type: integer
+      template_name:
+        type: string
+    type: object
+  response.sendBulkSMSResponse:
+    properties:
+      code:
+        type: string
+      info:
+        type: string
+      request_id:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  response.smsDashboardResponse:
+    properties:
+      total_applications:
+        type: integer
+      total_bulk_messages:
+        type: integer
+      total_otp_messages:
+        type: integer
+      total_prom_messages:
+        type: integer
+      total_providers:
+        type: integer
+      total_sms_sent:
+        type: integer
+      total_templates:
+        type: integer
+      total_trans_messages:
+        type: integer
+    type: object
+  response.smsSentStatusReportResponse:
+    properties:
+      application_id:
+        type: string
+      comm_id:
+        type: string
+      created_date:
+        type: string
+      facility_id:
+        type: string
+      gateway_id:
+        type: string
+      message_priority:
+        type: integer
+      message_text:
+        type: string
+      mobile_number:
+        type: integer
+      serial_no:
+        type: integer
+      status:
+        type: string
+    type: object
+  response.updateMsgApplicationResponse:
+    properties:
+      application_id:
+        type: integer
+      application_name:
+        type: string
+      request_type:
+        type: string
+      status:
+        type: integer
+      updated_date:
+        type: string
+    type: object
+  response.updateSMSProviderResponse:
+    properties:
+      configuration_keys:
+        items:
+          type: integer
+        type: array
+      provider_id:
+        type: integer
+      provider_name:
+        type: string
+      services:
+        type: string
+      short_name:
+        type: string
+      status:
+        description: ConfigurationKeys interface{} `json:"configuration_keys" db:"configuration_key"`
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support_cept@indiapost.gov.in
+    name: API Support Team
+    url: http://cept.gov.in/support
+  description: A comprehensive API for managing addresses, offering endpoints for
+    creation, update, deletion, and retrieval of Message Gateway data
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://cept.gov.in/terms
+  title: Message Gateway API
+  version: "1.0"
+paths:
+  /aggregate-sms-report:
+    get:
+      consumes:
+      - application/json
+      description: Fetches SMS Aggregate report Applicationwise, Templatewise and
+        Providerwise
+      operationId: AggregateSMSUsageReportHandler
+      parameters:
+      - example: 01-01-2008
+        in: query
+        name: from-date
+        required: true
+        type: string
+      - in: query
+        name: limit
+        type: integer
+      - in: query
+        name: orderBy
+        type: string
+      - example: 1
+        in: query
+        name: report-type
+        required: true
+        type: integer
+      - in: query
+        name: skip
+        type: integer
+      - in: query
+        name: sortType
+        type: string
+      - example: 18-06-2024
+        in: query
+        name: to-date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SMS Aggregate report is retrieved
+          schema:
+            $ref: '#/definitions/response.AggregateSMSReportAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Aggregate SMS Usage Report
+      tags:
+      - Reports
+  /applications:
+    get:
+      description: Lists all message applications
+      operationId: ListMessageApplicationsHandler
+      parameters:
+      - in: query
+        name: limit
+        type: integer
+      - in: query
+        name: orderBy
+        type: string
+      - in: query
+        name: skip
+        type: integer
+      - in: query
+        name: sortType
+        type: string
+      - example: true
+        in: query
+        name: status
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All Message Applications are retrieved
+          schema:
+            $ref: '#/definitions/response.ListMsgApplicationsAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Applications
+      tags:
+      - Applications
+    post:
+      consumes:
+      - application/json
+      description: Creates a new message application
+      operationId: CreateMessageApplicationHandler
+      parameters:
+      - description: Creates Message Application
+        in: body
+        name: createMessageApplicationRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createMessageApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: New Message Application is created
+          schema:
+            $ref: '#/definitions/response.CreateMsgApplicationAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Creates a message application
+      tags:
+      - Applications
+  /applications/{application-id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetches Message Application by ApplicationID
+      operationId: FetchApplicationHandler
+      parameters:
+      - example: 4
+        in: path
+        name: application-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Application is retrieved
+          schema:
+            $ref: '#/definitions/response.FetchMsgApplicationAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Application by ApplicationID
+      tags:
+      - Applications
+    put:
+      consumes:
+      - application/json
+      description: Allows editing of an existing Message Application
+      operationId: UpdateMessageApplicationHandler
+      parameters:
+      - description: Edit Message Application Request
+        in: path
+        name: application-id
+        required: true
+        type: integer
+      - description: Edit Message Application Request
+        in: body
+        name: updateMessageApplicationRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateMessageApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Application is modified
+          schema:
+            $ref: '#/definitions/response.UpdateMsgApplicationAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Edits an existing Message Application
+      tags:
+      - Applications
+  /applications/{application-id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Toggles the status of Message Application
+      operationId: ToggleApplicationStatusHandler
+      parameters:
+      - example: 4
+        in: path
+        name: application-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Application status is modified
+          schema:
+            $ref: '#/definitions/response.ToggleAppStatusAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Modifies the status of Message Application
+      tags:
+      - Applications
+  /bulk-sms:
+    post:
+      consumes:
+      - application/json
+      description: This API reads the output Excel file, constructs messages, and
+        sends them to the NIC service in XML format.
+      operationId: SendBulkSMSHandler
+      parameters:
+      - description: Request Body
+        in: body
+        name: sendBulkSMSRequest
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/handler.sendBulkSMSRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful operation
+          schema:
+            $ref: '#/definitions/response.SendBulkSMSAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Send processed Excel file data
+      tags:
+      - BulkSMS
+  /bulk-sms-initiate:
+    post:
+      consumes:
+      - application/json
+      description: Initiates sending of Bulk SMSes
+      operationId: InitiateBulkSMSHandler
+      parameters:
+      - description: Initiate Bulk SMS Request
+        in: body
+        name: initiateBulkSMSRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.initiateBulkSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Submitted successfully
+          schema:
+            $ref: '#/definitions/response.BulkSMSInitiateAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Send Bulk SMSes
+      tags:
+      - BulkSMS
+  /bulk-sms-validate-otp:
+    get:
+      consumes:
+      - application/json
+      description: Validates Test SMS
+      operationId: ValidateTestSMSHandler
+      parameters:
+      - example: lnv579ejt2vmaq03i7up
+        in: query
+        name: reference-id
+        required: true
+        type: string
+      - example: "906627"
+        in: query
+        name: test-string
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: True if validation succeeds, false otherwise
+          schema:
+            $ref: '#/definitions/response.ValidateBulkSMSOTPAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Validates Test SMS
+      tags:
+      - BulkSMS
+  /sms-dashboard:
+    get:
+      description: Fetches SMS Dashboard data
+      operationId: SMSDashboardHandler
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SMS Dashboard data is retrieved
+          schema:
+            $ref: '#/definitions/response.SMSDashboardAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get SMS Dashboard data
+      tags:
+      - Reports
+  /sms-providers:
+    get:
+      description: Lists all message service providers
+      operationId: ListMessageProvidersHandler
+      parameters:
+      - in: query
+        name: limit
+        type: integer
+      - in: query
+        name: orderBy
+        type: string
+      - in: query
+        name: skip
+        type: integer
+      - in: query
+        name: sortType
+        type: string
+      - example: true
+        in: query
+        name: status
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All Message service providers are retrieved
+          schema:
+            $ref: '#/definitions/response.ListSMSProvidersAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Providers
+      tags:
+      - Providers
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Message Service Provider
+      operationId: CreateMessageProviderHandler
+      parameters:
+      - description: Create Message Service Provider
+        in: body
+        name: createMessageProviderRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createMessageProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Message Service Provider is created
+          schema:
+            $ref: '#/definitions/response.CreateSMSProviderAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Creates a Message Service Provider
+      tags:
+      - Providers
+  /sms-providers/{provider-id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetches Message Service Provider by ProviderID
+      operationId: FetchMessageProviderHandler
+      parameters:
+      - example: 3
+        in: path
+        name: provider-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Provider is retrieved by ProviderID
+          schema:
+            $ref: '#/definitions/response.FetchSMSProviderAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Service Provider by ProviderID
+      tags:
+      - Providers
+    put:
+      consumes:
+      - application/json
+      description: Allows editing of an existing Message Provider
+      operationId: UpdateMessageProviderHandler
+      parameters:
+      - description: Edit Message Provider Request
+        in: path
+        name: provider-id
+        required: true
+        type: integer
+      - description: Edit Message Provider Request
+        in: body
+        name: updateMessageProviderRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateMessageProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Provider is modified
+          schema:
+            $ref: '#/definitions/response.UpdateSMSProviderAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Edits an existing Message Provider
+      tags:
+      - Providers
+  /sms-providers/{provider-id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Toggles the status of Message Provider
+      operationId: ToggleMessageProviderStatusHandler
+      parameters:
+      - example: 3
+        in: path
+        name: provider-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Provider status is modified
+          schema:
+            $ref: '#/definitions/response.ToggleProviderStatusAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Modifies the status of Message Provider
+      tags:
+      - Providers
+  /sms-request:
+    post:
+      consumes:
+      - application/json
+      description: Creates message requests for application for registered templates
+      operationId: CreateSMSRequestHandler
+      parameters:
+      - description: Creates Message request
+        in: body
+        name: createSMSRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Success
+          schema:
+            $ref: '#/definitions/response.CreateSMSAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Creates a message request
+      tags:
+      - SMS Request
+  /sms-sent-status-report:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all SMS requests
+      operationId: SentSMSStatusReportHandler
+      parameters:
+      - example: 01-01-2008
+        in: query
+        name: from-date
+        required: true
+        type: string
+      - in: query
+        name: limit
+        type: integer
+      - in: query
+        name: orderBy
+        type: string
+      - in: query
+        name: skip
+        type: integer
+      - in: query
+        name: sortType
+        type: string
+      - example: 18-06-2024
+        in: query
+        name: to-date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All message requests are retrieved
+          schema:
+            $ref: '#/definitions/response.SMSSentStatusReportAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get all SMS requests
+      tags:
+      - Reports
+  /sms-templates:
+    get:
+      consumes:
+      - application/json
+      description: Lists all message templates
+      operationId: ListTemplatesHandler
+      parameters:
+      - in: query
+        name: limit
+        type: integer
+      - in: query
+        name: orderBy
+        type: string
+      - in: query
+        name: skip
+        type: integer
+      - in: query
+        name: sortType
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All Message Templates are retrieved
+          schema:
+            $ref: '#/definitions/response.ListTemplatesAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get all Message Templates
+      tags:
+      - Templates
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Message template for message applications
+      operationId: CreateTemplateHandler
+      parameters:
+      - description: Create new Message Template
+        in: body
+        name: createTemplateRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Message Template is created
+          schema:
+            $ref: '#/definitions/response.CreateTemplateAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Creates a new message template
+      tags:
+      - Templates
+  /sms-templates/{template-local-id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetches Message Template by TemplateLocalID
+      operationId: FetchTemplateHandler
+      parameters:
+      - example: 355
+        in: path
+        name: template-local-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Template is retrieved by TemplateLocalID
+          schema:
+            $ref: '#/definitions/response.FetchTemplateAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Template by TemplateLocalID
+      tags:
+      - Templates
+    put:
+      consumes:
+      - application/json
+      description: Allows editing of an existing Message Template
+      operationId: UpdateTemplateHandler
+      parameters:
+      - description: Edit Message Template Request
+        in: path
+        name: template-local-id
+        required: true
+        type: integer
+      - description: Edit Message Template Request
+        in: body
+        name: updateTemplateRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Template is modified
+          schema:
+            $ref: '#/definitions/response.UpdateTemplatesAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Edits an existing Message Template
+      tags:
+      - Templates
+  /sms-templates/{template-local-id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Modifies the status of Message Template
+      operationId: ToggleTemplateStatusHandler
+      parameters:
+      - example: 355
+        in: path
+        name: template-local-id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Template status is modified
+          schema:
+            $ref: '#/definitions/response.ToggleTemplateStatusAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Modifies the status of Message Template
+      tags:
+      - Templates
+  /sms-templates/details:
+    get:
+      consumes:
+      - application/json
+      description: Fetch template details based on the provided query parameters such
+        as TemplateLocalID, ApplicationID, and Templateformat.
+      operationId: FetchTemplateDetailsHandler
+      parameters:
+      - example: "4"
+        in: query
+        name: application-id
+        type: string
+      - example: Dear {#var#}, your {#var#} is scheduled on {#var#}. Pl check details
+          over {#var#} - INDPOST
+        in: query
+        name: template-format
+        type: string
+      - example: 355
+        in: query
+        name: template-local-id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Fetched successfully
+          schema:
+            $ref: '#/definitions/response.FetchTemplateDetailsAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Template Details
+      tags:
+      - Templates
+  /sms-templates/name:
+    get:
+      consumes:
+      - application/json
+      description: Fetches Message Template names by ApplicationID
+      operationId: FetchTemplateByApplicationHandler
+      parameters:
+      - example: "4"
+        in: query
+        name: application-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message Template names are retrieved by ApplicationID
+          schema:
+            $ref: '#/definitions/response.FetchTemplateNameAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Get Message Template names by ApplicationID
+      tags:
+      - Templates
+  /test-sms-request:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new test message requests
+      operationId: CreateTestSMSHandler
+      parameters:
+      - description: Creates Message request
+        in: body
+        name: createSMSRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createTestSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Success
+          schema:
+            $ref: '#/definitions/response.TestSMSAPIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "409":
+          description: Data conflict errpr
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "422":
+          description: Binding or Validation error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/apierrors.APIErrorResponse'
+      summary: Creates a test message request
+      tags:
+      - SMS Request
+schemes:
+- http
+- https
+swagger: "2.0"
