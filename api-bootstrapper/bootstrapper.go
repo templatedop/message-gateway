@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	db "MgApplication/api-db"
@@ -79,7 +81,30 @@ func (b *Bootstrapper) BootstrapApp(options ...fx.Option) *fx.App {
 }
 
 func (b *Bootstrapper) Run(options ...fx.Option) {
-	b.BootstrapApp(options...).Run()
+	// Wrap the context with signal detection for graceful shutdown
+	// Listen for SIGINT (Ctrl+C) and SIGTERM (kill command)
+	ctx, cancel := signal.NotifyContext(b.context, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+
+	// Update the bootstrapper context with signal-aware context
+	b.context = ctx
+
+	// Monitor context cancellation in a separate goroutine
+	go func() {
+		<-ctx.Done()
+		if ctx.Err() == context.Canceled {
+			log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Shutdown signal received, initiating graceful shutdown...")
+		}
+	}()
+
+	// Create and run the FX application
+	app := b.BootstrapApp(options...)
+
+	// Run the application with signal handling
+	// When a signal is received, the context will be cancelled and fx will gracefully shutdown
+	app.Run()
+
+	log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Application shutdown complete")
 }
 
 var fxHealthcheck = fx.Module(
