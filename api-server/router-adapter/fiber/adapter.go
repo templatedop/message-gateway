@@ -12,6 +12,7 @@ import (
 	"MgApplication/api-server/router-adapter"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 )
 
 // init registers the Fiber adapter factory
@@ -62,6 +63,11 @@ func NewFiberAdapter(cfg *routeradapter.RouterConfig) (*FiberAdapter, error) {
 		app:          app,
 		config:       cfg,
 		errorHandler: routeradapter.NewFiberErrorHandler(),
+	}
+
+	// Enable gzip compression if configured
+	if cfg.EnableCompression {
+		adapter.setupGzipCompression()
 	}
 
 	// Set up centralized error handler
@@ -410,4 +416,27 @@ func (g *FiberGroup) UseNative(middleware interface{}) error {
 	default:
 		return fmt.Errorf("middleware must be func(*fiber.Ctx) error, got %T", middleware)
 	}
+}
+
+// setupGzipCompression configures gzip compression middleware for Fiber
+func (a *FiberAdapter) setupGzipCompression() {
+	// Map gzip compression levels to Fiber compression levels
+	level := compress.LevelDefault
+
+	switch a.config.CompressionLevel {
+	case 0, -1:
+		level = compress.LevelDefault
+	case 1:
+		level = compress.LevelBestSpeed
+	case 9:
+		level = compress.LevelBestCompression
+	default:
+		// Use the specified level directly (1-9)
+		level = compress.Level(a.config.CompressionLevel)
+	}
+
+	// Use Fiber's official compress middleware
+	a.app.Use(compress.New(compress.Config{
+		Level: level,
+	}))
 }

@@ -1,9 +1,11 @@
 package ginadapter
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"MgApplication/api-server/route"
@@ -81,6 +83,11 @@ func NewGinAdapter(cfg *routeradapter.RouterConfig) (*GinAdapter, error) {
 		engine:       engine,
 		config:       cfg,
 		errorHandler: routeradapter.NewGinErrorHandler(),
+	}
+
+	// Enable gzip compression if configured
+	if cfg.EnableCompression {
+		adapter.setupGzipCompression()
 	}
 
 	return adapter, nil
@@ -390,4 +397,54 @@ func (g *GinGroup) UseNative(middleware interface{}) error {
 
 	g.group.Use(ginMiddleware)
 	return nil
+}
+
+// setupGzipCompression configures gzip compression middleware for Gin
+func (a *GinAdapter) setupGzipCompression() {
+	level := a.config.CompressionLevel
+	if level == 0 {
+		level = -1 // gzip.DefaultCompression
+	}
+
+	// Use Gin's native gzip middleware if available, otherwise use framework-agnostic
+	gzipMiddleware := func(c *gin.Context) {
+		// Check if client accepts gzip
+		if !strings.Contains(c.GetHeader("Accept-Encoding"), "gzip") {
+			c.Next()
+			return
+		}
+
+		// Create gzip writer
+		gz, err := gzip.NewWriterLevel(c.Writer, level)
+		if err != nil {
+			c.Next()
+			return
+		}
+		defer gz.Close()
+
+		// Set response headers
+		c.Header("Content-Encoding", "gzip")
+		c.Header("Vary", "Accept-Encoding")
+
+		// Wrap response writer
+		c.Writer = &gzipWriter{ResponseWriter: c.Writer, Writer: gz}
+
+		c.Next()
+	}
+
+	a.engine.Use(gzipMiddleware)
+}
+
+// gzipWriter wraps gin.ResponseWriter for gzip compression
+type gzipWriter struct {
+	gin.ResponseWriter
+	Writer *gzip.Writer
+}
+
+func (g *gzipWriter) Write(data []byte) (int, error) {
+	return g.Writer.Write(data)
+}
+
+func (g *gzipWriter) WriteString(s string) (int, error) {
+	return g.Writer.Write([]byte(s))
 }

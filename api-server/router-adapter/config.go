@@ -1,6 +1,7 @@
 package routeradapter
 
 import (
+	"compress/gzip"
 	"fmt"
 	"strings"
 	"time"
@@ -50,6 +51,10 @@ type RouterConfig struct {
 	IdleTimeout       time.Duration `yaml:"idleTimeout" json:"idleTimeout"`
 	ReadHeaderTimeout time.Duration `yaml:"readHeaderTimeout" json:"readHeaderTimeout"`
 	MaxHeaderBytes    int           `yaml:"maxHeaderBytes" json:"maxHeaderBytes"`
+
+	// Compression configuration
+	EnableCompression bool `yaml:"enableCompression" json:"enableCompression"`
+	CompressionLevel  int  `yaml:"compressionLevel" json:"compressionLevel"` // 1-9, default is 6
 }
 
 // GinConfig contains Gin-specific configuration
@@ -154,6 +159,16 @@ func (c *RouterConfig) Validate() error {
 	}
 	if c.ReadHeaderTimeout == 0 {
 		c.ReadHeaderTimeout = 10 * time.Second
+	}
+
+	// Set default compression level if enabled
+	if c.EnableCompression && c.CompressionLevel == 0 {
+		c.CompressionLevel = gzip.DefaultCompression
+	}
+
+	// Validate compression level (gzip levels: -1 to 9, where -1 is default)
+	if c.CompressionLevel < gzip.DefaultCompression || c.CompressionLevel > gzip.BestCompression {
+		return fmt.Errorf("invalid compression level: %d (must be -1 to 9)", c.CompressionLevel)
 	}
 
 	// Validate framework-specific configs

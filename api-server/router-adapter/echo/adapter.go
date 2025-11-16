@@ -10,6 +10,7 @@ import (
 	"MgApplication/api-server/router-adapter"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 // init registers the Echo adapter factory
@@ -52,6 +53,11 @@ func NewEchoAdapter(cfg *routeradapter.RouterConfig) (*EchoAdapter, error) {
 		echo:         e,
 		config:       cfg,
 		errorHandler: routeradapter.NewEchoErrorHandler(),
+	}
+
+	// Enable gzip compression if configured
+	if cfg.EnableCompression {
+		adapter.setupGzipCompression()
 	}
 
 	// Set up centralized error handler
@@ -366,4 +372,26 @@ func (g *EchoGroup) UseNative(middleware interface{}) error {
 
 	g.group.Use(echoMiddleware)
 	return nil
+}
+
+// setupGzipCompression configures gzip compression middleware for Echo
+func (a *EchoAdapter) setupGzipCompression() {
+	// Map compression level to Echo's gzip levels
+	level := -1 // Default compression
+
+	switch a.config.CompressionLevel {
+	case 0, -1:
+		level = -1 // Default compression
+	case 1:
+		level = 1 // Best speed
+	case 9:
+		level = 9 // Best compression
+	default:
+		level = a.config.CompressionLevel
+	}
+
+	// Use Echo's official gzip middleware
+	a.echo.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: level,
+	}))
 }

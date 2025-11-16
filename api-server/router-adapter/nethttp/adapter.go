@@ -50,6 +50,11 @@ func NewNetHTTPAdapter(cfg *routeradapter.RouterConfig) (*NetHTTPAdapter, error)
 		middlewares:  make([]routeradapter.MiddlewareFunc, 0),
 	}
 
+	// Enable gzip compression if configured
+	if cfg.EnableCompression {
+		adapter.setupGzipCompression()
+	}
+
 	return adapter, nil
 }
 
@@ -392,4 +397,11 @@ func pathToRegex(path string) (*regexp.Regexp, []string) {
 
 	regex := regexp.MustCompile(pattern)
 	return regex, params
+}
+
+// setupGzipCompression configures gzip compression middleware for net/http
+func (a *NetHTTPAdapter) setupGzipCompression() {
+	// Use the framework-agnostic gzip middleware
+	gzipMiddleware := routeradapter.GzipMiddleware(a.config.CompressionLevel)
+	_ = a.RegisterMiddleware(gzipMiddleware)
 }
