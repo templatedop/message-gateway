@@ -171,9 +171,12 @@ func (CustomJSONBinding) BindBody(body []byte, obj interface{}) error {
 	return json.Unmarshal(body, obj)
 }
 
-// func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, Checker *healthcheck.Checker) *Router {
-func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
+// ============================================================================
+// HELPER FUNCTIONS FOR SERVER INITIALIZATION
+// ============================================================================
 
+// configureGinMode sets the Gin framework mode based on configuration
+func configureGinMode(cfg *config.Config) {
 	if cfg.Exists("server.env") {
 		switch cfg.GetString("server.env") {
 		case "production":
@@ -182,345 +185,339 @@ func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, Metr
 			gin.SetMode(gin.TestMode)
 		case "debug":
 			gin.SetMode(gin.DebugMode)
-
 		default:
 			gin.SetMode(gin.ReleaseMode)
 		}
-
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	binding.JSON = CustomJSONBinding{}
+}
 
-	//add all no method, no path, no handler routes here
-	app := gin.New()
+// configureRateLimiting sets up rate limiting middleware based on configuration
+func configureRateLimiting(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+	ratelimit := "medium" // default
+	if cfg.Exists("server.ratelimit") {
+		ratelimit = cfg.GetString("server.ratelimit")
+	}
+
+	switch ratelimit {
+	case "verylow":
+		globalBucket = rate.NewLeakyBucket(100, 300)
+	case "low":
+		globalBucket = rate.NewLeakyBucket(200, 450)
+	case "medium":
+		globalBucket = rate.NewLeakyBucket(DefaultRate, DefaultCapacity)
+	case "high":
+		globalBucket = rate.NewLeakyBucket(400, 900)
+	case "veryhigh":
+		globalBucket = rate.NewLeakyBucket(500, 1100)
+	default:
+		globalBucket = rate.NewLeakyBucket(DefaultRate, DefaultCapacity)
+	}
+
+	app.Use(middlewares.RateMiddleware(globalBucket))
+	ratelimiter.InitMetrics(globalBucket, metricsRegistry)
+}
+
+// registerCoreMiddlewares adds body limiter, rate limiter, CORS, recovery, and error handler
+func registerCoreMiddlewares(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+	// Get server config with fallback
 	serverCfg, err := cfg.Of("server")
 	if err != nil {
 		log.Error(nil, "Failed to get server config, using root config: %v", err)
-		serverCfg = cfg // Fallback to root config
+		serverCfg = cfg
 	}
 
+	// Get CORS config
 	corsCfg, err := serverCfg.Of("cors")
 	if err != nil {
 		log.Warn(nil, "Failed to get CORS config, CORS middleware will use empty defaults: %v", err)
-		// corsCfg will be used even if err != nil, but it will return empty values
-		// This is acceptable as CORSMiddleware handles empty slices gracefully
 	}
 
-	var defaultsizelimit int64
-
-	defaultsizelimit = 2 * 1024 * 1024
-
-	var sizelimit int64 = 0
-	sizelimit = cfg.GetInt64("server.bodylimit")
-
+	// Configure body size limit
+	defaultsizelimit := int64(2 * 1024 * 1024)
+	sizelimit := cfg.GetInt64("server.bodylimit")
 	if sizelimit == 0 {
-		sizelimit = int64(defaultsizelimit)
+		sizelimit = defaultsizelimit
 	}
+
 	app.Use(
 		middlewares.BodyLimiter(sizelimit),
 		middlewares.BodyLimitErrorHandler())
 
-	if cfg.Exists("server.ratelimit") {
-		ratelimit := cfg.GetString("server.ratelimit")
-		switch ratelimit {
-		case "verylow":
-			globalBucket = rate.NewLeakyBucket(100, 300)
-		case "low":
-			globalBucket = rate.NewLeakyBucket(200, 450)
-		case "medium":
-			globalBucket = rate.NewLeakyBucket(DefaultRate, DefaultCapacity)
-		case "high":
-			globalBucket = rate.NewLeakyBucket(400, 900)
-		case "veryhigh":
-			globalBucket = rate.NewLeakyBucket(500, 1100)
-		default:
-			globalBucket = rate.NewLeakyBucket(DefaultRate, DefaultCapacity)
-		}
-	} else {
-		globalBucket = rate.NewLeakyBucket(DefaultRate, DefaultCapacity)
-	}
-	app.Use(middlewares.RateMiddleware(globalBucket))
-	ratelimiter.InitMetrics(globalBucket, MetricsRegistry)
+	// Configure rate limiting
+	configureRateLimiting(app, cfg, metricsRegistry)
 
+	// Add core middlewares
+	app.Use(
+		middlewares.CORSMiddleware(corsCfg),
+		middlewares.Recover(cfg),
+		middlewares.ErrorHandler(),
+	)
+}
+
+// registerSecurityMiddlewares adds encryption/decryption middleware if enabled
+func registerSecurityMiddlewares(app *gin.Engine, cfg *config.Config) {
 	encryptenabled := false
 	if cfg.Exists("server.encrypt") {
 		encryptenabled = cfg.GetBool("server.encrypt")
 	}
 
-	app.Use(
-		middlewares.CORSMiddleware(corsCfg),
-		middlewares.Recover(cfg),
-		//middlewares.CustomJSON(),
-
-		middlewares.ErrorHandler(),
-
-		//middlewares.TimeoutMiddleware(time.Second*50),
-	)
-
 	if encryptenabled {
 		app.Use(middlewares.DecryptMiddleware())
 		app.Use(middlewares.ResponseSignatureMiddleware())
 	}
+}
 
+// parseMetricBuckets parses metric bucket configuration from config string
+func parseMetricBuckets(cfg *config.Config) []float64 {
+	var buckets []float64
+	if bucketsConfig := cfg.GetString("metrics.buckets"); bucketsConfig != "" {
+		for _, s := range Split(bucketsConfig) {
+			f, err := strconv.ParseFloat(s, 64)
+			if err == nil {
+				buckets = append(buckets, f)
+			}
+		}
+	}
+	return buckets
+}
+
+// registerObservabilityMiddlewares adds tracing, logging, and metrics middleware
+func registerObservabilityMiddlewares(app *gin.Engine, cfg *config.Config,
+	osdktrace *otelsdktrace.TracerProvider, metricsRegistry *prometheus.Registry) {
+
+	// Configure tracing
 	if cfg.GetBool("trace.enabled") {
-		// var token string
-
-		// if cfg.Exists("trace.token") {
-		// 	token = cfg.GetString("trace.token")
-		// }
-
 		app.Use(middlewares.RequestTracerMiddleware(
 			cfg.AppName(),
 			middlewares.RequestTracerMiddlewareConfig{
 				TracerProvider: AnnotateTracerProvider(osdktrace),
 			},
-			// token,
 		))
 	}
 
-	app.Use(middlewares.SetCtxLoggerMiddleware(),
+	// Configure logging
+	app.Use(
+		middlewares.SetCtxLoggerMiddleware(),
 		middlewares.RequestResponseLoggerMiddleware())
 
-	// Register global routes: healthz, NoRoute, NoMethod
-	Setup(app)
-
+	// Configure metrics
 	if cfg.GetBool("metrics.collect.routes") {
-		var buckets []float64
-		if bucketsConfig := cfg.GetString("metrics.buckets"); bucketsConfig != "" {
-			for _, s := range Split(bucketsConfig) {
-				f, err := strconv.ParseFloat(s, 64)
-				if err == nil {
-					buckets = append(buckets, f)
-				}
-			}
-		}
-
+		buckets := parseMetricBuckets(cfg)
 		metricsMiddlewareConfig := middlewares.RequestMetricsMiddlewareConfig{
-			Registry: MetricsRegistry,
-			// Namespace:               Sanitize(cfg.GetString("appname")),
+			Registry:                metricsRegistry,
 			Namespace:               "",
 			Subsystem:               Sanitize("router"),
 			Buckets:                 buckets,
 			NormalizeRequestPath:    true,
 			NormalizeResponseStatus: true,
 		}
-
 		app.Use(middlewares.RequestMetricsMiddlewareWithConfig(metricsMiddlewareConfig))
 	}
+}
 
-	dashboardEnabled := cfg.GetBool("server.dashboard.enabled")
-	pprofExpose := cfg.GetBool("server.debug.pprof.expose")
-	//startupExpose := cfg.GetBool("server.healthcheck.expose")
-	metricsExpose := cfg.GetBool("metrics.expose")
-	statsExpose := cfg.GetBool("server.debug.stats.expose")
-	metricsPath := DefaultMetricsPath
+// registerPprofEndpoints registers performance profiling endpoints
+func registerPprofEndpoints(app *gin.Engine, cfg *config.Config) {
 	pprofPath := cfg.GetString("server.debug.pprof.path")
-	statsPath := cfg.GetString("server.debug.stats.path")
-	//startupPath := cfg.GetString("server.healthcheck.path")
-
-	if metricsPath == "" {
-		metricsPath = "/metrics"
+	if pprofPath == "" {
+		pprofPath = DefaultDebugPProfPath
 	}
 
-	if metricsExpose {
-		app.GET(metricsPath, gin.WrapH(promhttp.HandlerFor(MetricsRegistry, promhttp.HandlerOpts{})))
+	pprofGroup := app.Group(pprofPath)
+	pprofGroup.GET("/", prof.PprofIndexHandler())
+	pprofGroup.GET("/allocs", prof.PprofAllocsHandler())
+	pprofGroup.GET("/block", prof.PprofBlockHandler())
+	pprofGroup.GET("/cmdline", prof.PprofCmdlineHandler())
+	pprofGroup.GET("/goroutine", prof.PprofGoroutineHandler())
+	pprofGroup.GET("/heap", prof.PprofHeapHandler())
+	pprofGroup.GET("/mutex", prof.PprofMutexHandler())
+	pprofGroup.GET("/profile", prof.PprofProfileHandler())
+	pprofGroup.GET("/symbol", prof.PprofSymbolHandler())
+	pprofGroup.POST("/symbol", prof.PprofSymbolHandler())
+	pprofGroup.GET("/threadcreate", prof.PprofThreadCreateHandler())
+	pprofGroup.GET("/trace", prof.PprofTraceHandler())
+
+	log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered debug pprof handlers")
+}
+
+// registerDashboardEndpoints registers dashboard UI endpoints
+func registerDashboardEndpoints(app *gin.Engine, cfg *config.Config) {
+	renderer, err := NewDashboardRenderer(templatesFS, "templates/dashboard.html")
+	if err != nil {
+		panic(err)
+	}
+
+	// Get config values once
+	statsExpose := cfg.GetBool("server.debug.stats.expose")
+	statsPath := cfg.GetString("server.debug.stats.path")
+	metricsExpose := cfg.GetBool("metrics.expose")
+	metricsPath := cfg.GetString("metrics.path")
+	if metricsPath == "" {
+		metricsPath = DefaultMetricsPath
+	}
+	pprofExpose := cfg.GetBool("server.debug.pprof.expose")
+	pprofPath := cfg.GetString("server.debug.pprof.path")
+
+	// Theme switching endpoint
+	app.POST("/theme", func(c *gin.Context) {
+		themeCookie := &http.Cookie{Name: "theme"}
+
+		var theme DashboardTheme
+		if err := c.ShouldBind(&theme); err != nil {
+			themeCookie.Value = ThemeLight
+		} else {
+			switch theme.Theme {
+			case ThemeDark:
+				themeCookie.Value = ThemeDark
+			case ThemeLight:
+				themeCookie.Value = ThemeLight
+			default:
+				themeCookie.Value = ThemeLight
+			}
+		}
+
+		http.SetCookie(c.Writer, themeCookie)
+		c.Redirect(http.StatusMovedPermanently, "/")
+	})
+
+	log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered dashboard theme handler")
+
+	// Dashboard rendering endpoint
+	app.GET("/dashboard", func(c *gin.Context) {
+		theme := ThemeLight
+		if themeCookie, err := c.Cookie("theme"); err == nil {
+			switch themeCookie {
+			case ThemeDark:
+				theme = ThemeDark
+			case ThemeLight:
+				theme = ThemeLight
+			}
+		}
+
+		renderer.Render(c, "dashboard.html", gin.H{
+			"statsExpose":   statsExpose,
+			"statsPath":     statsPath,
+			"metricsExpose": metricsExpose,
+			"metricsPath":   metricsPath,
+			"pprofExpose":   pprofExpose,
+			"pprofPath":     pprofPath,
+			"theme":         theme,
+		})
+	})
+
+	log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered dashboard handler")
+}
+
+// registerStatsvizEndpoints registers runtime statistics visualization endpoints
+func registerStatsvizEndpoints(app *gin.Engine, cfg *config.Config) {
+	statsPath := cfg.GetString("server.debug.stats.path")
+	if statsPath == "" {
+		statsPath = DefaultDebugStatsPath
+	}
+
+	srv, err := statsviz.NewServer()
+	if err != nil {
+		panic(err)
+	}
+
+	debug := app.Group(statsPath)
+	debug.GET("/*filepath", func(c *gin.Context) {
+		if c.Param("filepath") == "/ws" {
+			srv.Ws()(c.Writer, c.Request)
+			return
+		}
+		srv.Index()(c.Writer, c.Request)
+	})
+}
+
+// registerDebugEndpoints registers pprof, dashboard, statsviz, and metrics endpoints
+func registerDebugEndpoints(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+	// Metrics endpoint
+	if cfg.GetBool("metrics.expose") {
+		metricsPath := DefaultMetricsPath
+		if metricsPath == "" {
+			metricsPath = "/metrics"
+		}
+		app.GET(metricsPath, gin.WrapH(promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{})))
 		log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered metrics handler")
 	}
 
-	if pprofExpose {
-		if pprofPath == "" {
-			pprofPath = DefaultDebugPProfPath
-		}
-
-		pprofGroup := app.Group(pprofPath)
-
-		pprofGroup.GET("/", prof.PprofIndexHandler())
-		pprofGroup.GET("/allocs", prof.PprofAllocsHandler())
-		pprofGroup.GET("/block", prof.PprofBlockHandler())
-		pprofGroup.GET("/cmdline", prof.PprofCmdlineHandler())
-		pprofGroup.GET("/goroutine", prof.PprofGoroutineHandler())
-		pprofGroup.GET("/heap", prof.PprofHeapHandler())
-		pprofGroup.GET("/mutex", prof.PprofMutexHandler())
-		pprofGroup.GET("/profile", prof.PprofProfileHandler())
-		pprofGroup.GET("/symbol", prof.PprofSymbolHandler())
-		pprofGroup.POST("/symbol", prof.PprofSymbolHandler())
-		pprofGroup.GET("/threadcreate", prof.PprofThreadCreateHandler())
-		pprofGroup.GET("/trace", prof.PprofTraceHandler())
-
-		log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered debug pprof handlers")
-
+	// Pprof endpoints
+	if cfg.GetBool("server.debug.pprof.expose") {
+		registerPprofEndpoints(app, cfg)
 	}
 
-	if dashboardEnabled {
-		renderer, err := NewDashboardRenderer(templatesFS, "templates/dashboard.html")
-		if err != nil {
-			panic(err)
-		}
-		// theme
-		app.POST("/theme", func(c *gin.Context) {
-			themeCookie := &http.Cookie{
-				Name: "theme",
-			}
-
-			var theme DashboardTheme
-			if err := c.ShouldBind(&theme); err != nil {
-				themeCookie.Value = ThemeLight
-			} else {
-				switch theme.Theme {
-				case ThemeDark:
-					themeCookie.Value = ThemeDark
-				case ThemeLight:
-					themeCookie.Value = ThemeLight
-				default:
-					themeCookie.Value = ThemeLight
-				}
-			}
-
-			http.SetCookie(c.Writer, themeCookie)
-			c.Redirect(http.StatusMovedPermanently, "/")
-		})
-
-		log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered dashboard theme handler")
-
-		// render
-		app.GET("/dashboard", func(c *gin.Context) {
-			var theme string
-			themeCookie, err := c.Cookie("theme")
-			if err == nil {
-				switch themeCookie {
-				case ThemeDark:
-					theme = ThemeDark
-				case ThemeLight:
-					theme = ThemeLight
-				default:
-					theme = ThemeLight
-				}
-			} else {
-				theme = ThemeLight
-			}
-			renderer.Render(c, "dashboard.html", gin.H{
-				"statsExpose":   statsExpose,
-				"statsPath":     statsPath,
-				"metricsExpose": metricsExpose,
-				"metricsPath":   metricsPath,
-				"pprofExpose":   pprofExpose,
-				"pprofPath":     pprofPath,
-				"theme":         theme,
-			})
-		})
-
-		log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered dashboard handler")
+	// Dashboard endpoints
+	if cfg.GetBool("server.dashboard.enabled") {
+		registerDashboardEndpoints(app, cfg)
 	}
 
-	if statsExpose {
-		if statsPath == "" {
-			statsPath = DefaultDebugStatsPath
-		}
-
-		srv, err := statsviz.NewServer()
-		if err != nil {
-			panic(err)
-		}
-
-		debug := app.Group(statsPath)
-		{
-			debug.GET("/*filepath", func(c *gin.Context) {
-				if c.Param("filepath") == "/ws" {
-					srv.Ws()(c.Writer, c.Request)
-					return
-				}
-				srv.Index()(c.Writer, c.Request)
-			})
-		}
-
+	// Statsviz endpoints
+	if cfg.GetBool("server.debug.stats.expose") {
+		registerStatsvizEndpoints(app, cfg)
 	}
+}
 
-	// if startupExpose {
-	// 	if startupPath == "" {
-	// 		startupPath = DefaultHealthCheckStartupPath
-	// 	}
-
-	// 	// app.GET(startupPath,
-	// 	// 	func(ctx *gin.Context) {
-	// 	// 		 results := Checker.Check(ctx.Request.Context(), healthcheck.Startup)
-	// 	// 		 overallHealthy := true
-	// 	//     healthStatus := gin.H{}
-	// 	// 	for name, result := range results.ProbesResults {
-	// 	// 		if !result.Success {
-	// 	// 			overallHealthy = false
-	// 	// 		}
-	// 	// 		healthStatus[name] = gin.H{
-	// 	//         "ok":      result.Success,
-	// 	//         "details": result.Message,
-	// 	//     }
-
-	// 	// 	}
-	// 	// 	if overallHealthy {
-	// 	// 		ctx.JSON(http.StatusOK, gin.H{
-	// 	// 			"status": "healthy",
-	// 	// 			"probes": healthStatus,
-	// 	// 		})
-	// 	// 	} else {
-	// 	// 		ctx.JSON(http.StatusInternalServerError, gin.H{
-	// 	// 			"status": "unhealthy",
-	// 	// 			"probes": healthStatus,
-	// 	// 		})
-	// 	// 	}
-
-	// 	// },
-	// 	// )
-
-	// //	app.GET(startupPath, health.MultipleHealthCheckHandler(Checker, healthcheck.Startup))
-	// 	log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered healthcheck startup handler")
-	// }
+// createAndConfigureRouter creates router and configures connection limits, timeouts, and metrics
+func createAndConfigureRouter(app *gin.Engine, cfg *config.Config,
+	registries []*registry, metricsRegistry *prometheus.Registry) *Router {
 
 	r := NewRouter(app, cfg, registries)
 	r.RegisterRoutes()
+
+	// Configure max connections
 	r.MaxConnections = defaultMaxConnections
-	if r.cfg.Exists("server.maxConnections") {
-		r.MaxConnections = r.cfg.GetInt64("server.maxConnections")
+	if cfg.Exists("server.maxConnections") {
+		r.MaxConnections = cfg.GetInt64("server.maxConnections")
 	}
 
-	// Initialize connection tracking metrics
-	InitConnectionMetrics(MetricsRegistry)
+	// Initialize connection metrics
+	InitConnectionMetrics(metricsRegistry)
 	SetMaxConnections(r.MaxConnections)
-	if r.cfg.Exists("server.addr") {
-		r.Addr = r.cfg.GetString("server.addr")
+
+	// Configure server address
+	if cfg.Exists("server.addr") {
+		r.Addr = cfg.GetString("server.addr")
 	} else {
 		r.Addr = ":8080"
 	}
 
-	// if r.cfg.Exists("server.readTimeout") {
-	// 	r.ReadTimeout = r.cfg.GetDuration("server.readTimeout")
-	// } else {
-	// 	r.ReadTimeout = 90 * time.Second
-	// }
-
-	// if r.cfg.Exists("server.writeTimeout") {
-	// 	r.WriteTimeout = r.cfg.GetDuration("server.writeTimeout")
-	// } else {
-	// 	r.WriteTimeout = 90 * time.Second
-	// }
-
+	// Configure timeouts
 	r.ReadTimeout = 90 * time.Second
 	r.WriteTimeout = 90 * time.Second
 	r.IdleTimeout = 90 * time.Second
 	r.ReadHeaderTimeout = 90 * time.Second
-	// if r.cfg.Exists("server.idleTimeout") {
-	// 	r.IdleTimeout = r.cfg.GetDuration("server.idleTimeout")
-	// } else {
-	// 	r.IdleTimeout = 90 * time.Second
-	// }
-
-	// if r.cfg.Exists("server.readHeaderTimeout") {
-	// 	r.IdleTimeout = r.cfg.GetDuration("server.readHeaderTimeout")
-	// } else {
-	// 	r.IdleTimeout = 30 * time.Second
-	// }
 
 	return r
+}
 
+// ============================================================================
+// MAIN SERVER INITIALIZATION FUNCTION
+// ============================================================================
+
+// func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, Checker *healthcheck.Checker) *Router {
+func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
+	// Configure Gin mode based on environment
+	configureGinMode(cfg)
+	binding.JSON = CustomJSONBinding{}
+
+	// Create Gin engine
+	app := gin.New()
+
+	// Register middlewares in order
+	registerCoreMiddlewares(app, cfg, MetricsRegistry)
+	registerSecurityMiddlewares(app, cfg)
+	registerObservabilityMiddlewares(app, cfg, osdktrace, MetricsRegistry)
+
+	// Register global routes: healthz, NoRoute, NoMethod
+	Setup(app)
+
+	// Register debug and monitoring endpoints
+	registerDebugEndpoints(app, cfg, MetricsRegistry)
+
+	// Create and configure router with timeouts and connection limits
+	return createAndConfigureRouter(app, cfg, registries, MetricsRegistry)
 }
 
 var isShuttingDown atomic.Value
