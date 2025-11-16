@@ -261,34 +261,85 @@ var FxReadDB = fx.Module(
 
 type readDBLifecycleParams struct {
 	fx.In
-	DB *db.DB `name:"read_db"`
-	LC fx.Lifecycle
+	Ctx context.Context // Signal-aware context from bootstrapper
+	DB  *db.DB          `name:"read_db"`
+	LC  fx.Lifecycle
 }
 
 func readdblifecycle(p readDBLifecycleParams) {
 	p.LC.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				log.GetBaseLoggerInstance().ToZerolog().Info().Str("module", "DBModule").Msg("Starting read fxdb module")
-				err := p.DB.Ping()
+				log.GetBaseLoggerInstance().ToZerolog().Info().Str("module", "ReadDBModule").Msg("Starting read database module")
+
+				// Use context-aware ping
+				err := p.DB.PingContext(ctx)
 				if err != nil {
 					return err
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to read database")
 
+				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to read database")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
+				logger := log.GetBaseLoggerInstance().ToZerolog()
 
+				// Log connection stats before shutdown
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Str("Total connections:", string(count.TotalConns())).Msg("Connection stats during shutdown:")
+					logger.Info().
+						Int32("total_conns", count.TotalConns()).
+						Int32("idle_conns", count.IdleConns()).
+						Int32("acquired_conns", count.AcquiredConns()).
+						Msg("Read database connection stats at shutdown start")
 				}
 
+				// Wait for active connections to drain with timeout
+				// This allows in-flight HTTP requests to complete their DB operations
+				drainTimeout := 5 * time.Second
+				drainCtx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+				defer cancel()
+
+				logger.Info().
+					Dur("drain_timeout", drainTimeout).
+					Msg("Waiting for read database connections to drain...")
+
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-drainCtx.Done():
+						// Timeout reached, force close
+						if count := p.DB.Stat(); count != nil {
+							logger.Warn().
+								Int32("remaining_acquired", count.AcquiredConns()).
+								Msg("Read DB drain timeout reached, forcing database closure")
+						}
+						goto closeDB
+
+					case <-ticker.C:
+						// Check if all connections are idle
+						if count := p.DB.Stat(); count != nil {
+							if count.AcquiredConns() == 0 {
+								logger.Info().Msg("All read database connections drained successfully")
+								goto closeDB
+							}
+						}
+					}
+				}
+
+			closeDB:
+				// Close the database connection pool
 				p.DB.Close()
+
+				// Log final stats
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Str("Stats after release : read db:", string(count.TotalConns())).Msg("Connections after release....")
+					logger.Info().
+						Int32("final_total_conns", count.TotalConns()).
+						Msg("Read database connection pool closed")
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Read Database shutdown complete!!")
+
+				logger.Info().Msg("Read database shutdown complete")
 				return nil
 			},
 		},
