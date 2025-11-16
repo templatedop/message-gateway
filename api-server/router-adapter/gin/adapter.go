@@ -290,6 +290,9 @@ func (a *GinAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc) 
 		nextCalled := false
 		next := func() error {
 			nextCalled = true
+			// Sync request back to Gin context BEFORE calling next handler
+			// This ensures context updates from middleware are visible to handlers
+			c.Request = rctx.Request
 			c.Next()
 			return nil
 		}
@@ -302,8 +305,9 @@ func (a *GinAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc) 
 			return
 		}
 
-		// If next wasn't called, call it now
+		// If next wasn't called, call it now (and sync request)
 		if !nextCalled {
+			c.Request = rctx.Request
 			c.Next()
 		}
 	}

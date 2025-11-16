@@ -290,6 +290,10 @@ func (a *FiberAdapter) fiberContextToRouterContext(c *fiber.Ctx) *routeradapter.
 		Header: make(http.Header),
 	}
 
+	// Attach Fiber's user context to preserve trace context and other request-scoped values
+	// This ensures middleware updates (like tracing) are propagated to RouterContext
+	req = req.WithContext(c.UserContext())
+
 	// Copy headers
 	c.Request().Header.VisitAll(func(key, value []byte) {
 		req.Header.Add(string(key), string(value))

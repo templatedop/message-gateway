@@ -65,14 +65,22 @@ func NewRouterContext(w http.ResponseWriter, r *http.Request) *RouterContext {
 
 // Context returns the request context
 // This includes cancellation, deadlines, and request-scoped values
+// Always returns the current request context to ensure middleware updates are visible
 func (rc *RouterContext) Context() context.Context {
+	if rc.Request != nil {
+		return rc.Request.Context()
+	}
 	return rc.ctx
 }
 
 // SetContext updates the request context
 // Useful for adding cancellation, timeout, or tracing context
+// Updates both the internal context and the Request context to ensure consistency
 func (rc *RouterContext) SetContext(ctx context.Context) {
 	rc.ctx = ctx
+	if rc.Request != nil {
+		rc.Request = rc.Request.WithContext(ctx)
+	}
 }
 
 // Param gets a path parameter by name

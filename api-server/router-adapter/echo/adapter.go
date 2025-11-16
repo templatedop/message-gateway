@@ -250,6 +250,9 @@ func (a *EchoAdapter) convertMiddleware(middleware routeradapter.MiddlewareFunc)
 
 			// Define next function
 			nextFunc := func() error {
+				// Sync request back to Echo context BEFORE calling next handler
+				// This ensures context updates from middleware are visible to handlers
+				c.SetRequest(rctx.Request)
 				return next(c)
 			}
 
