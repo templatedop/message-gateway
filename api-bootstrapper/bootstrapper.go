@@ -15,7 +15,7 @@ import (
 
 	auth "MgApplication/api-authz"
 	config "MgApplication/api-config"
-	g "MgApplication/grpc-server"
+	// g "MgApplication/grpc-server" // Commented out - grpc-server not implemented yet
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -669,6 +669,8 @@ func temporallifecycle(lc fx.Lifecycle, temporalclient tclient.Client) {
 // var compresskb connect.Option = connect.WithCompressMinBytes(1024)
 var addr = ":8083"
 
+// FxGrpc module - Commented out until grpc-server package is implemented
+/*
 var FxGrpc = fx.Module(
 	"gRPCmodule",
 
@@ -699,6 +701,7 @@ var FxGrpc = fx.Module(
 		})
 	}),
 )
+*/
 
 var fxMetrics = fx.Module(
 	"metrics",
