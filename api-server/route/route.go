@@ -1,7 +1,7 @@
 package route
 
 import (
-	validation "MgApplication/api-validation"
+	// validation "MgApplication/api-validation" - removed, using govalid in handlers
 	"bytes"
 	"context"
 	"errors"
@@ -258,10 +258,11 @@ func build[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) gin.Hand
 			}
 
 			// Validation after all sources bound
-			if err := validation.ValidateStruct(req); err != nil {
-				apierrors.HandleValidationError(c, err)
-				return
-			}
+			// Validation is now done in individual handlers using govalid
+			// if err := validation.ValidateStruct(req); err != nil {
+			// 	apierrors.HandleValidationError(c, err)
+			// 	return
+			// }
 		}
 
 		// Add simple timing header for deserialization (append if existing)

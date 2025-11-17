@@ -9,7 +9,7 @@ import (
 
 	apierrors "MgApplication/api-errors"
 	"MgApplication/api-server/util/diutil/typlect"
-	validation "MgApplication/api-validation"
+	// validation "MgApplication/api-validation" - removed, using govalid in handlers
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -101,10 +101,11 @@ func buildImproved[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) 
 			}
 
 			// Validate the bound request
-			if err := validation.ValidateStruct(req); err != nil {
-				apierrors.HandleValidationError(c, err)
-				return
-			}
+			// Validation is now done in individual handlers using govalid
+			// if err := validation.ValidateStruct(req); err != nil {
+			// 	apierrors.HandleValidationError(c, err)
+			// 	return
+			// }
 		}
 
 		// Add Server-Timing header using pooled string builder

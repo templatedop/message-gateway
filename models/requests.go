@@ -149,3 +149,16 @@ type SendBulkSMSRequest struct {
 type FetchCDACSMSDeliveryStatusRequest struct {
 	ReferenceID string `form:"reference_id" validate:"required"`
 }
+
+// Validate methods for structs without validation tags
+func (r *ListTemplatesRequest) Validate() error {
+	return nil // No validation required
+}
+
+func (r *FetchTemplateDetailsRequest) Validate() error {
+	return nil // No validation required - all fields are optional
+}
+
+func (r *ListMessageProviderRequest) Validate() error {
+	return nil // No validation required
+}

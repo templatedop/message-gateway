@@ -16,30 +16,30 @@ func ServiceRequestType(f1 validator.FieldLevel) bool {
 
 func NewValidatorService() error {
 
-	err := validation.Create()
-	if err != nil {
-		return err
-	}
-	// add the custom validator here
-	// err = validation.RegisterCustomValidation("validateEmail", ValidateEmail, "Incorrect email Format")
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = validation.RegisterCustomValidation("hourvalidate", HourValidate, "field %s must be in the format 'HH:MM:SS', with a valid hour (00-23), minute (00-59), and second (00-59), but received %v")
-	// if err != nil {
-	// 	return err
-	// }
-
-	err = validation.RegisterCustomValidation("request_type", ServiceRequestType, "invalid values for %s, must be 1-4 but received %v")
-	if err != nil {
-		return err
-	}
-
-	err = validation.RegisterCustomValidation("services", ServiceRequestType, "invalid values for %s, must be 1-4 but received %v")
-	if err != nil {
-		return err
-	}
+// 	err := validation.Create()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	// add the custom validator here
+// 	// err = validation.RegisterCustomValidation("validateEmail", ValidateEmail, "Incorrect email Format")
+// 	// if err != nil {
+// 	// 	return err
+// 	// }
+// 
+// 	// err = validation.RegisterCustomValidation("hourvalidate", HourValidate, "field %s must be in the format 'HH:MM:SS', with a valid hour (00-23), minute (00-59), and second (00-59), but received %v")
+// 	// if err != nil {
+// 	// 	return err
+// 	// }
+// 
+// 	err = validation.RegisterCustomValidation("request_type", ServiceRequestType, "invalid values for %s, must be 1-4 but received %v")
+// 	if err != nil {
+// 		return err
+// 	}
+// 
+// 	err = validation.RegisterCustomValidation("services", ServiceRequestType, "invalid values for %s, must be 1-4 but received %v")
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
 	return nil
 }

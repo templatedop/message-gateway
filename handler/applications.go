@@ -566,11 +566,11 @@ func (ah *ApplicationHandler) ToggleApplicationStatusHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
-		apierrors.HandleValidationError(ctx, err)
-		log.Error(ctx, "Validation failed for toggleApplicationStatusRequest: %s", err.Error())
-		return
-	}
+	// if err := validation.ValidateStruct(req); err != nil {
+	// 		apierrors.HandleValidationError(ctx, err)
+	// 		log.Error(ctx, "Validation failed for toggleApplicationStatusRequest: %s", err.Error())
+	// 		return
+	// 	}
 
 	msgappreq := domain.StatusApplication{
 		ApplicationID: req.ApplicationID,
