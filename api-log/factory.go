@@ -26,7 +26,8 @@ const (
 )
 
 var (
-	once sync.Once
+	once      sync.Once
+	createErr error
 )
 
 type LoggerFactory interface {
@@ -39,7 +40,9 @@ func NewDefaultLoggerFactory() LoggerFactory {
 	return &DefaultLoggerFactory{}
 }
 
-// Create creates a new logger instance with the provided options
+// Create creates a new logger instance with the provided options.
+// This function is thread-safe and will only initialize the logger once.
+// Subsequent calls will return the error from the first initialization attempt (if any).
 func (f *DefaultLoggerFactory) Create(options ...loggerOption) error {
 	once.Do(func() {
 		appliedOpts := defaultLoggerOptions()
@@ -60,9 +63,13 @@ func (f *DefaultLoggerFactory) Create(options ...loggerOption) error {
 		baseLogger = &Logger{
 			logger: &logger,
 		}
+
+		// createErr remains nil if initialization succeeds
+		// In future, if we add validation or other operations that can fail,
+		// we can set createErr here
 	})
 
-	return nil
+	return createErr
 }
 
 // SetCtxLoggerMiddleware creates a sublogger with request metadata and embed this inside ginCtx
