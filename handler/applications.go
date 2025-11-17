@@ -6,7 +6,6 @@ import (
 	log "MgApplication/api-log"
 	serverHandler "MgApplication/api-server/handler"
 	serverRoute "MgApplication/api-server/route"
-	validation "MgApplication/api-validation"
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"

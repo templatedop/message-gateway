@@ -1004,7 +1004,7 @@ func TimedQueueReturnBulk[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn p
 func validateOutputVariable[T any](output *T) error {
 	if output == nil {
 		err := fmt.Errorf("the output variable cannot be nil. Please provide a valid reference")
-		appError := apierrors.NewAppError("Error occurred while validating the output variable", "400", err)
+		appError := apierrors.NewAppError("Error occurred while validating the output variable", 400, err)
 		return &appError
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"
+	"MgApplication/models"
 	repo "MgApplication/repo/postgres"
 	"math"
 
@@ -12,7 +13,6 @@ import (
 	config "MgApplication/api-config"
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -66,7 +66,7 @@ type createTemplateRequest struct {
 //	@Router			/sms-templates [post]
 func (ch *TemplateHandler) CreateTemplateHandler(ctx *gin.Context) {
 
-	var req createTemplateRequest
+	var req models.CreateTemplateRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -74,7 +74,7 @@ func (ch *TemplateHandler) CreateTemplateHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for createTemplateRequest: %s", err.Error())
 		return
@@ -146,7 +146,7 @@ type listTemplatesRequest struct {
 //	@Failure		504						{object}	apierrors.APIErrorResponse			"Gateway Timeout"
 //	@Router			/sms-templates [get]
 func (ch *TemplateHandler) ListTemplatesHandler(ctx *gin.Context) {
-	var req listTemplatesRequest
+	var req models.ListTemplatesRequest
 
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -154,7 +154,7 @@ func (ch *TemplateHandler) ListTemplatesHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for ListTemplatesRequest: %s", err.Error())
 		return
@@ -214,7 +214,7 @@ type toggleTemplateStatusRequest struct {
 //	@Router			/sms-templates/{template-local-id}/status [put]
 func (ch *TemplateHandler) ToggleTemplateStatusHandler(ctx *gin.Context) {
 
-	var req toggleTemplateStatusRequest
+	var req models.ToggleTemplateStatusRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -222,7 +222,7 @@ func (ch *TemplateHandler) ToggleTemplateStatusHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for toggleTemplateStatusRequest: %s", err.Error())
 		return
@@ -275,7 +275,7 @@ type fetchTemplateRequest struct {
 //	@Router			/sms-templates/{template-local-id} [get]
 func (ch *TemplateHandler) FetchTemplateHandler(ctx *gin.Context) {
 
-	var req fetchTemplateRequest
+	var req models.FetchTemplateRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -283,7 +283,7 @@ func (ch *TemplateHandler) FetchTemplateHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for fetchTemplateRequest: %s", err.Error())
 		return
@@ -347,7 +347,7 @@ type updateTemplateRequest struct {
 //	@Router			/sms-templates/{template-local-id} [put]
 func (ch *TemplateHandler) UpdateTemplateHandler(ctx *gin.Context) {
 
-	var req updateTemplateRequest
+	var req models.UpdateTemplateRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -361,7 +361,7 @@ func (ch *TemplateHandler) UpdateTemplateHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for updateTemplateRequest: %s", err.Error())
 		return
@@ -429,7 +429,7 @@ type fetchTemplateByApplicationRequest struct {
 //	@Router			/sms-templates/name [get]
 func (ch *TemplateHandler) FetchTemplateByApplicationHandler(ctx *gin.Context) {
 
-	var req fetchTemplateByApplicationRequest
+	var req models.FetchTemplateByApplicationRequest
 
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -437,7 +437,7 @@ func (ch *TemplateHandler) FetchTemplateByApplicationHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for fetchTemplateByApplicationRequest: %s", err.Error())
 		return
@@ -493,14 +493,14 @@ type fetchTemplateDetailsRequest struct {
 //	@Router			/sms-templates/details [get]
 func (ch *TemplateHandler) FetchTemplateDetailsHandler(ctx *gin.Context) {
 
-	var req fetchTemplateDetailsRequest
+	var req models.FetchTemplateDetailsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
 		log.Error(ctx, "Binding failed for fetchTemplateDetailsRequest: %s", err.Error())
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for fetchTemplateDetailsRequest: %s", err.Error())
 		return

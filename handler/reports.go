@@ -4,6 +4,7 @@ import (
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"
+	"MgApplication/models"
 	repo "MgApplication/repo/postgres"
 	"math"
 	"time"
@@ -13,7 +14,6 @@ import (
 	config "MgApplication/api-config"
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -96,7 +96,7 @@ type sentSMSStatusReportRequest struct {
 //	@Router			/sms-sent-status-report [get]
 func (ch *ReportsHandler) SentSMSStatusReportHandler(ctx *gin.Context) {
 
-	var req sentSMSStatusReportRequest
+	var req models.SentSMSStatusReportRequest
 
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -104,7 +104,7 @@ func (ch *ReportsHandler) SentSMSStatusReportHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for sentSMSStatusReportRequest: %s", err.Error())
 		return
@@ -172,7 +172,7 @@ type aggregateSMSUsageReportRequest struct {
 //	@Router			/aggregate-sms-report [get]
 func (ch *ReportsHandler) AggregateSMSUsageReportHandler(ctx *gin.Context) {
 
-	var req aggregateSMSUsageReportRequest
+	var req models.AggregateSMSUsageReportRequest
 
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -180,7 +180,7 @@ func (ch *ReportsHandler) AggregateSMSUsageReportHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for aggregateSMSUsageReportRequest: %s", err.Error())
 		return

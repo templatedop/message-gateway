@@ -6,12 +6,12 @@ import (
 
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
+	"github.com/templatedop/govalid"
 
 	"github.com/gin-gonic/gin"
 )
 
-func BindAndValidate(ctx *gin.Context, req interface{}, bindUri, bindQuery, bindJson bool) error {
+func BindAndValidate(ctx *gin.Context, req govalid.Validator, bindUri, bindQuery, bindJson bool) error {
 
 	// Get the handler's file and line number
 	_, file, line, _ := runtime.Caller(1)
@@ -42,7 +42,7 @@ func BindAndValidate(ctx *gin.Context, req interface{}, bindUri, bindQuery, bind
 	}
 
 	// Validate the struct
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		log.Error(ctx, "Calling function: %s, Validation error: %s", callerInfo, err.Error())
 		apierrors.HandleValidationError(ctx, err)
 		return err

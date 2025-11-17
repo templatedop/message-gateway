@@ -4,6 +4,7 @@ import (
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"
+	"MgApplication/models"
 	"bytes"
 	"encoding/xml"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
 )
 
 type initiateBulkSMSRequest struct {
@@ -56,7 +56,7 @@ type initiateBulkSMSRequest struct {
 //	@Router			/bulk-sms-initiate [post]
 func (ch *MgApplicationHandler) InitiateBulkSMSHandler(ctx *gin.Context) {
 
-	var req initiateBulkSMSRequest
+	var req models.InitiateBulkSMSRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		apierrors.HandleError(ctx, err)
@@ -64,7 +64,7 @@ func (ch *MgApplicationHandler) InitiateBulkSMSHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for initiateBulkSMSRequest: %s", err.Error())
 		return
@@ -169,7 +169,7 @@ type validateTestSMSRequest struct {
 //	@Failure		504						{object}	apierrors.APIErrorResponse				"Gateway Timeout"
 //	@Router			/bulk-sms-validate-otp [get]
 func (ch *MgApplicationHandler) ValidateTestSMSHandler(ctx *gin.Context) {
-	var req validateTestSMSRequest
+	var req models.ValidateTestSMSRequest
 	if err := ctx.ShouldBind(&req); err != nil {
 		log.Error(ctx, "URI Binding Error in ValidateTestSMS: %s", err.Error())
 		// ch.vs.handleError(ctx, err)
@@ -180,7 +180,7 @@ func (ch *MgApplicationHandler) ValidateTestSMSHandler(ctx *gin.Context) {
 	// 	return
 	// }
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for validateTestSMSRequest: %s", err.Error())
 		return
@@ -441,7 +441,7 @@ func (ch *MgApplicationHandler) SendBulkSMSOld(gctx *gin.Context) {
 //	@Failure		504					{object}	apierrors.APIErrorResponse		"Gateway Timeout"
 //	@Router			/bulk-sms [post]
 func (ch *MgApplicationHandler) SendBulkSMSHandler(gctx *gin.Context) {
-	var req []sendBulkSMSRequest
+	var req []models.SendBulkSMSRequest
 	if err := gctx.BindJSON(&req); err != nil {
 		log.Error(gctx, "Binding failed for sendBulkSMSRequest: %s", err.Error())
 		apierrors.HandleBindingError(gctx, err)
@@ -453,7 +453,7 @@ func (ch *MgApplicationHandler) SendBulkSMSHandler(gctx *gin.Context) {
 	// 	return
 	// }
 	for _, sms := range req {
-		if err := validation.ValidateStruct(sms); err != nil {
+		if err := sms.Validate(); err != nil {
 			// fmt.Printf("sms request is %v", sms)
 			apierrors.HandleValidationError(gctx, err)
 			log.Error(gctx, "Validation failed for sendBulkSMSRequest: %s", err.Error())

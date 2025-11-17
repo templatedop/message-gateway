@@ -20,6 +20,7 @@ import (
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"
+	"MgApplication/models"
 	repo "MgApplication/repo/postgres"
 	"bytes"
 	"context"
@@ -44,7 +45,6 @@ import (
 	config "MgApplication/api-config"
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -81,18 +81,7 @@ func UnicodemsgConvertNIC(message string) string {
 	return UnicodeMessage.String()
 }
 
-type createSMSRequest struct {
-	RequestID     uint64 `json:"reqid"`
-	ApplicationID string `json:"application_id" validate:"required" example:"4"`
-	FacilityID    string `json:"facility_id" validate:"required" example:"facility1"`
-	Priority      int    `json:"priority" validate:"required" example:"1"`
-	MessageText   string `json:"message_text" validate:"required" example:"Your OTP is : 1342789 for Account_Creation. Please keep it for further references"`
-	SenderID      string `json:"sender_id" validate:"required" example:"INPOST"`
-	MobileNumbers string `json:"mobile_numbers" validate:"required" example:"9000000000"`
-	EntityId      string `json:"entity_id" example:"1301157641566214705"`
-	TemplateID    string `json:"template_id" validate:"required" example:"1307160377410448739"`
-	MessageType   string `json:"message_type" example:"PM"`
-}
+// Use models.CreateSMSRequest instead
 
 // CreateMessageRequest godoc
 //
@@ -116,14 +105,14 @@ type createSMSRequest struct {
 //	@Router			/sms-request [post]
 func (ch *MgApplicationHandler) CreateSMSRequestHandler(ctx *gin.Context) {
 	log.Debug(ctx, "Inside CreateSMSRequestHandler function")
-	var req createSMSRequest
+	var req models.CreateSMSRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Error(ctx, "Binding failed for CreateSMSRequestHandler: %s", err.Error())
 		apierrors.HandleBindingError(ctx, err)
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for CreateSMSRequestHandler: %s", err.Error())
 		return
@@ -412,7 +401,7 @@ func (ch *MgApplicationHandler) CreateSMSRequestHandler(ctx *gin.Context) {
 
 func (ch *MgApplicationHandler) CreateSMSRequestHandlerKafka(ctx *gin.Context) {
 	log.Debug(ctx, "Inside CreateSMSRequestHandler function")
-	var req createSMSRequest
+	var req models.CreateSMSRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Error(ctx, "Binding failed for CreateSMSRequestHandler: %s", err.Error())
 		// ch.vs.handleError(ctx, err)
@@ -420,7 +409,7 @@ func (ch *MgApplicationHandler) CreateSMSRequestHandlerKafka(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for CreateSMSRequestHandler: %s", err.Error())
 		return
@@ -744,9 +733,7 @@ func (ch *MgApplicationHandler) CreateTestSMSHandlerOld(ctx *gin.Context) {
 }
 */
 
-type createTestSMSRequest struct {
-	MobileNumber string `json:"mobile_number" binding:"required"` // Mobile number as request parameter
-}
+// Use models.CreateTestSMSRequest instead
 
 /*
 func (ch *MgApplicationHandler) CreateTestSMSHandlerOld2(ctx *gin.Context) {
@@ -818,7 +805,7 @@ func (ch *MgApplicationHandler) CreateTestSMSHandlerOld2(ctx *gin.Context) {
 //	@Failure		504					{object}	apierrors.APIErrorResponse	"Gateway Timeout"
 //	@Router			/test-sms-request [post]
 func (ch *MgApplicationHandler) CreateTestSMSHandler(ctx *gin.Context) {
-	var req createTestSMSRequest
+	var req models.CreateTestSMSRequest
 
 	// Bind and validate JSON payload for mobile number
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -827,7 +814,7 @@ func (ch *MgApplicationHandler) CreateTestSMSHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for createTestSMSRequest: %s", err.Error())
 		return
@@ -1178,26 +1165,20 @@ func (ce CustomError) Error() string {
 
 // }
 
-type FetchCDACSMSDeliveryStatusRequest struct {
-	// UserName string `json:"username" validate:"required" example:"appostsms"`
-	// Password string `json:"password" validate:"required" example:"88c151b622140ae329d772317136cd74931611c7"`
-	ReferenceID string `form:"reference_id" validate:"required,numeric" example:"250220251740480271265"`
-	// IsPwdEncrypted bool `json:"pwd_encrypted" validate:"required" example:"true"`
-
-}
+// Use models.FetchCDACSMSDeliveryStatusRequest instead
 
 func (ch *MgApplicationHandler) FetchCDACSMSDeliveryStatusHandler(gctx *gin.Context) {
 
 	log.Debug(gctx, "Inside FetchCDACSMSDeliveryStatusHandler")
 
-	var req FetchCDACSMSDeliveryStatusRequest
+	var req models.FetchCDACSMSDeliveryStatusRequest
 	if err := gctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(gctx, err)
 		log.Error(gctx, "Query Binding failed for FetchCDACSMSDeliveryStatusRequest: %s", err.Error())
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(gctx, err)
 		log.Error(gctx, "Validation failed for FetchCDACSMSDeliveryStatusRequest: %s", err.Error())
 		return

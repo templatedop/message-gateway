@@ -4,6 +4,7 @@ import (
 	"MgApplication/core/domain"
 	"MgApplication/core/port"
 	"MgApplication/handler/response"
+	"MgApplication/models"
 	repo "MgApplication/repo/postgres"
 	"math"
 
@@ -14,7 +15,6 @@ import (
 	config "MgApplication/api-config"
 	apierrors "MgApplication/api-errors"
 	log "MgApplication/api-log"
-	validation "MgApplication/api-validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -64,7 +64,7 @@ type createMessageProviderRequest struct {
 //	@Router			/sms-providers [post]
 func (ph *ProviderHandler) CreateMessageProviderHandler(ctx *gin.Context) {
 
-	var req createMessageProviderRequest
+	var req models.CreateMessageProviderRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		apierrors.HandleDBError(ctx, err)
@@ -72,7 +72,7 @@ func (ph *ProviderHandler) CreateMessageProviderHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for createMessageProviderRequest: %s", err.Error())
 		return
@@ -142,14 +142,14 @@ type listMessageProviderRequest struct {
 //	@Router			/sms-providers [get]
 func (ph *ProviderHandler) ListMessageProvidersHandler(ctx *gin.Context) {
 
-	var req listMessageProviderRequest
+	var req models.ListMessageProviderRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
 		log.Error(ctx, "Binding failed for listMessageProviderRequest: %s", err.Error())
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for listMessageProviderRequest: %s", err.Error())
 		return
@@ -210,7 +210,7 @@ type fetchMessageProviderRequest struct {
 //	@Router			/sms-providers/{provider-id} [get]
 func (ph *ProviderHandler) FetchMessageProviderHandler(ctx *gin.Context) {
 
-	var req fetchMessageProviderRequest
+	var req models.FetchMessageProviderRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -218,7 +218,7 @@ func (ph *ProviderHandler) FetchMessageProviderHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for fetchMessageProviderRequest: %s", err.Error())
 		return
@@ -280,7 +280,7 @@ type updateMessageProviderRequest struct {
 //	@Router			/sms-providers/{provider-id} [put]
 func (ph *ProviderHandler) UpdateMessageProviderHandler(ctx *gin.Context) {
 
-	var req updateMessageProviderRequest
+	var req models.UpdateMessageProviderRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -294,7 +294,7 @@ func (ph *ProviderHandler) UpdateMessageProviderHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for updateMessageProviderRequest: %s", err.Error())
 		return
@@ -357,7 +357,7 @@ type toggleMessageProviderStatusRequest struct {
 //	@Router			/sms-providers/{provider-id}/status [put]
 func (ch *ProviderHandler) ToggleMessageProviderStatusHandler(ctx *gin.Context) {
 
-	var req toggleMessageProviderStatusRequest
+	var req models.ToggleMessageProviderStatusRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		apierrors.HandleBindingError(ctx, err)
@@ -365,7 +365,7 @@ func (ch *ProviderHandler) ToggleMessageProviderStatusHandler(ctx *gin.Context) 
 		return
 	}
 
-	if err := validation.ValidateStruct(req); err != nil {
+	if err := req.Validate(); err != nil {
 		apierrors.HandleValidationError(ctx, err)
 		log.Error(ctx, "Validation failed for updateMessageProviderRequest: %s", err.Error())
 		return
