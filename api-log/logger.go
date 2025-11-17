@@ -25,7 +25,8 @@ const (
 )
 
 var (
-	baseLogger *Logger
+	baseLogger     *Logger
+	samplingConfig *SamplingConfig
 )
 
 type Logger struct {
@@ -219,6 +220,14 @@ func getEventLoggerWithSkip(ctx context.Context, level zerolog.Level, skipFrames
 		logger = getDefaultLogger()
 	}
 
+	// Check sampling config to determine if this log should be emitted
+	tags := GetTags(ctx)
+	if samplingConfig != nil && !samplingConfig.ShouldLog(level, tags) {
+		// Return a disabled event that will not log anything
+		nopLogger := zerolog.Nop()
+		return nopLogger.WithLevel(level)
+	}
+
 	// Add caller information with correct skip frame count
 	// skipFrames should be:
 	// - 2 for direct Event API usage: getEventLoggerWithSkip -> InfoEvent -> caller
@@ -227,10 +236,8 @@ func getEventLoggerWithSkip(ctx context.Context, level zerolog.Level, skipFrames
 	event := lw.WithLevel(level)
 
 	// Add tags from context if present
-	if ctx != nil {
-		if tags := GetTags(ctx); len(tags) > 0 {
-			event.Strs(tagsKey, tags)
-		}
+	if len(tags) > 0 {
+		event.Strs(tagsKey, tags)
 	}
 
 	return event
@@ -273,7 +280,10 @@ func WithTags(ctx context.Context, tags ...string) context.Context {
 	}
 
 	existingTags := GetTags(ctx)
-	allTags := append(existingTags, tags...)
+	// Pre-allocate slice to avoid growth
+	allTags := make([]string, 0, len(existingTags)+len(tags))
+	allTags = append(allTags, existingTags...)
+	allTags = append(allTags, tags...)
 
 	return context.WithValue(ctx, logTagsContextKey, allTags)
 }
