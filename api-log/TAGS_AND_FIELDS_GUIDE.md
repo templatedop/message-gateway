@@ -509,7 +509,8 @@ jq 'select(.tags | contains(["payment"]) and .level == "error" and .amount > 100
 - **Combine**: Use tags for broad categorization, fields for specific data
 - **Choose API**: Simple → WithFields → Event based on complexity
 
-For more examples, see:
+For more examples and advanced features, see:
 - `api-log/tags_and_fields_example_test.go`
 - `api-log/example_test.go`
 - `api-log/MIGRATION_GUIDE.md`
+- `api-log/ADVANCED_FEATURES_GUIDE.md` - Middleware configuration, sampling, and performance
