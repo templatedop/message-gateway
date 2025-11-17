@@ -272,19 +272,19 @@ func TestFromZerolog(t *testing.T) {
 		t.Error("FromZerolog should set the internal logger")
 	}
 
-	// Verify it works by logging a message
-	logger.msg(zerolog.InfoLevel, "test")
+	// Verify it works by logging via the Event API
+	logger.logger.Info().Msg("test")
 	if buf.Len() == 0 {
 		t.Error("Logger should be able to log messages")
 	}
 }
 
-func TestLogger_Msg_WithString(t *testing.T) {
-	var buf bytes.Buffer
-	zl := zerolog.New(&buf)
-	logger := &Logger{logger: &zl}
+func TestLogWithEvent_String(t *testing.T) {
+	buf := setupTestLogger()
 
-	logger.msg(zerolog.InfoLevel, "test message")
+	// Test logWithEvent with string message
+	event := InfoEvent(nil)
+	logWithEvent(event, "test message")
 
 	output := buf.String()
 	if !contains(output, "test message") {
@@ -292,17 +292,30 @@ func TestLogger_Msg_WithString(t *testing.T) {
 	}
 }
 
-func TestLogger_Msg_WithError(t *testing.T) {
-	var buf bytes.Buffer
-	zl := zerolog.New(&buf)
-	logger := &Logger{logger: &zl}
+func TestLogWithEvent_Error(t *testing.T) {
+	buf := setupTestLogger()
 
+	// Test logWithEvent with error
 	testErr := &testError{msg: "error occurred"}
-	logger.msg(zerolog.ErrorLevel, testErr)
+	event := ErrorEvent(nil)
+	logWithEvent(event, testErr)
 
 	output := buf.String()
 	if !contains(output, "error occurred") {
 		t.Errorf("Expected 'error occurred' in output, got: %s", output)
+	}
+}
+
+func TestLogWithEvent_WithFormatting(t *testing.T) {
+	buf := setupTestLogger()
+
+	// Test logWithEvent with format string
+	event := InfoEvent(nil)
+	logWithEvent(event, "user %s completed %d tasks", "john", 5)
+
+	output := buf.String()
+	if !contains(output, "john") || !contains(output, "5") {
+		t.Errorf("Expected formatted message in output, got: %s", output)
 	}
 }
 
