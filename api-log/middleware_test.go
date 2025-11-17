@@ -346,3 +346,333 @@ func TestGetDefaultLogger(t *testing.T) {
 		t.Error("getDefaultLogger should initialize the logger")
 	}
 }
+
+func TestRequestResponseLoggerMiddlewareWithConfig_CustomSkipPaths(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+
+	config := &MiddlewareConfig{
+		SkipPaths:        []string{"/metrics", "/ready", "/status"},
+		SkipPathPrefixes: []string{},
+		SkipMethodPaths:  make(map[string][]string),
+	}
+	router.Use(RequestResponseLoggerMiddlewareWithConfig(config))
+
+	router.GET("/metrics", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/ready", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/api/users", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test /metrics - should be skipped
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "/metrics") {
+		t.Error("/metrics should be skipped from logging")
+	}
+
+	// Test /ready - should be skipped
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/ready", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/ready") {
+		t.Error("/ready should be skipped from logging")
+	}
+
+	// Test /api/users - should be logged
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/api/users", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "/api/users") {
+		t.Error("/api/users should be logged")
+	}
+}
+
+func TestRequestResponseLoggerMiddlewareWithConfig_SkipPrefixes(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+
+	config := &MiddlewareConfig{
+		SkipPaths:        []string{},
+		SkipPathPrefixes: []string{"/internal/", "/debug/"},
+		SkipMethodPaths:  make(map[string][]string),
+	}
+	router.Use(RequestResponseLoggerMiddlewareWithConfig(config))
+
+	router.GET("/internal/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/debug/pprof", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/api/users", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test /internal/health - should be skipped
+	req := httptest.NewRequest("GET", "/internal/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "/internal/health") {
+		t.Error("/internal/health should be skipped from logging")
+	}
+
+	// Test /debug/pprof - should be skipped
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/debug/pprof", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/debug/pprof") {
+		t.Error("/debug/pprof should be skipped from logging")
+	}
+
+	// Test /api/users - should be logged
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/api/users", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "/api/users") {
+		t.Error("/api/users should be logged")
+	}
+}
+
+func TestRequestResponseLoggerMiddlewareWithConfig_MethodPaths(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+
+	config := &MiddlewareConfig{
+		SkipPaths:        []string{},
+		SkipPathPrefixes: []string{},
+		SkipMethodPaths: map[string][]string{
+			"GET":  {"/status", "/ping"},
+			"POST": {"/webhook"},
+		},
+	}
+	router.Use(RequestResponseLoggerMiddlewareWithConfig(config))
+
+	router.GET("/status", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.POST("/status", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.POST("/webhook", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test GET /status - should be skipped
+	req := httptest.NewRequest("GET", "/status", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "GET") && contains(output, "/status") {
+		t.Error("GET /status should be skipped from logging")
+	}
+
+	// Test POST /status - should be logged (different method)
+	buf.Reset()
+	req = httptest.NewRequest("POST", "/status", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "POST") || !contains(output, "/status") {
+		t.Error("POST /status should be logged")
+	}
+
+	// Test POST /webhook - should be skipped
+	buf.Reset()
+	req = httptest.NewRequest("POST", "/webhook", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/webhook") {
+		t.Error("POST /webhook should be skipped from logging")
+	}
+}
+
+func TestRequestResponseLoggerMiddlewareWithConfig_NilConfig(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+	router.Use(RequestResponseLoggerMiddlewareWithConfig(nil)) // nil config should use defaults
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/api/users", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test /healthz - should be skipped (default behavior)
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "/healthz") {
+		t.Error("/healthz should be skipped with default config")
+	}
+
+	// Test /health - should be skipped (default behavior)
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/health", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/health") {
+		t.Error("/health should be skipped with default config")
+	}
+
+	// Test /api/users - should be logged
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/api/users", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "/api/users") {
+		t.Error("/api/users should be logged")
+	}
+}
+
+func TestRequestResponseLoggerMiddlewareWithConfig_CombinedRules(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+
+	config := &MiddlewareConfig{
+		SkipPaths:        []string{"/healthz"},
+		SkipPathPrefixes: []string{"/internal/"},
+		SkipMethodPaths: map[string][]string{
+			"GET": {"/metrics"},
+		},
+	}
+	router.Use(RequestResponseLoggerMiddlewareWithConfig(config))
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/internal/debug", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/metrics", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.POST("/metrics", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test exact path skip
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "/healthz") {
+		t.Error("/healthz should be skipped")
+	}
+
+	// Test prefix skip
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/internal/debug", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/internal/debug") {
+		t.Error("/internal/debug should be skipped")
+	}
+
+	// Test method+path skip
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/metrics", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "GET") && contains(output, "/metrics") {
+		t.Error("GET /metrics should be skipped")
+	}
+
+	// Test that different method is logged
+	buf.Reset()
+	req = httptest.NewRequest("POST", "/metrics", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "POST") || !contains(output, "/metrics") {
+		t.Error("POST /metrics should be logged")
+	}
+}
+
+func TestRequestResponseLoggerMiddleware_BackwardCompatibility(t *testing.T) {
+	buf := setupTestLoggerForMiddleware()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(SetCtxLoggerMiddleware)
+	router.Use(RequestResponseLoggerMiddleware) // Old function should still work
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	router.GET("/api/users", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Test /healthz - should be skipped (backward compatible)
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output := buf.String()
+	if contains(output, "/healthz") {
+		t.Error("/healthz should be skipped for backward compatibility")
+	}
+
+	// Test /health - should be skipped (new default)
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/health", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if contains(output, "/health") {
+		t.Error("/health should be skipped with new defaults")
+	}
+
+	// Test /api/users - should be logged
+	buf.Reset()
+	req = httptest.NewRequest("GET", "/api/users", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	output = buf.String()
+	if !contains(output, "/api/users") {
+		t.Error("/api/users should be logged")
+	}
+}

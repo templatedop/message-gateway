@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,6 +64,9 @@ func (f *DefaultLoggerFactory) Create(options ...loggerOption) error {
 		baseLogger = &Logger{
 			logger: &logger,
 		}
+
+		// Set global sampling config if provided
+		samplingConfig = appliedOpts.SamplingConfig
 
 		// createErr remains nil if initialization succeeds
 		// In future, if we add validation or other operations that can fail,
@@ -130,28 +134,62 @@ func getCtxLogger(ctx context.Context) *Logger {
 	return contextLogger
 }
 
+// RequestResponseLoggerMiddleware logs HTTP request/response details using default configuration.
+// This function uses DefaultMiddlewareConfig which skips logging for /healthz and /health endpoints.
+// For custom skip paths configuration, use RequestResponseLoggerMiddlewareWithConfig instead.
 func RequestResponseLoggerMiddleware(c *gin.Context) {
-	// Start timer
-	start := time.Now()
-	path := c.Request.URL.Path
-	raw := c.Request.URL.RawQuery
-	method := c.Request.Method
+	handler := RequestResponseLoggerMiddlewareWithConfig(nil)
+	handler(c)
+}
 
-	// Process request
-	c.Next()
-	if c.Request.Method == "GET" && c.Request.URL.Path == "/healthz" {
-		return
+// RequestResponseLoggerMiddlewareWithConfig logs HTTP request/response details with configurable skip paths.
+// If config is nil, DefaultMiddlewareConfig() is used.
+//
+// Example usage:
+//   config := &log.MiddlewareConfig{
+//       SkipPaths: []string{"/healthz", "/metrics", "/ready"},
+//       SkipPathPrefixes: []string{"/internal/", "/debug/"},
+//       SkipMethodPaths: map[string][]string{
+//           "GET": {"/status", "/ping"},
+//       },
+//   }
+//   router.Use(log.RequestResponseLoggerMiddlewareWithConfig(config))
+func RequestResponseLoggerMiddlewareWithConfig(config *MiddlewareConfig) gin.HandlerFunc {
+	if config == nil {
+		config = DefaultMiddlewareConfig()
 	}
-	// Stop timer
-	timeStamp := time.Now()
 
-	if raw != "" {
-		path = path + "?" + raw
+	return func(c *gin.Context) {
+		// Start timer
+		start := time.Now()
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
+		method := c.Request.Method
+
+		// Process request
+		c.Next()
+
+		// Check if path should be skipped
+		if config.ShouldSkip(method, path) {
+			return
+		}
+
+		// Stop timer
+		timeStamp := time.Now()
+
+		// Use strings.Builder for efficient path concatenation
+		var pathBuilder strings.Builder
+		pathBuilder.Grow(len(path) + len(raw) + 1) // Pre-allocate: path + "?" + raw
+		pathBuilder.WriteString(path)
+		if raw != "" {
+			pathBuilder.WriteByte('?')
+			pathBuilder.WriteString(raw)
+		}
+		fullPath := pathBuilder.String()
+
+		getCtxLogger(c).ToZerolog().Info().Str("user-agent", c.Request.UserAgent()).Str("client-ip", c.ClientIP()).Str("method", method).Str("path", fullPath).Str("protocol", c.Request.Proto).Str("http-referer", c.Request.Referer()).Int("status", c.Writer.Status()).Dur("latency-ms", timeStamp.Sub(start).Round(time.Millisecond)).Int64("bytes-received", c.Request.ContentLength).
+			Int("bytes-sent", c.Writer.Size()).Msg("request")
 	}
-	fullPath := path
-
-	getCtxLogger(c).ToZerolog().Info().Str("user-agent", c.Request.UserAgent()).Str("client-ip", c.ClientIP()).Str("method", method).Str("path", fullPath).Str("protocol", c.Request.Proto).Str("http-referer", c.Request.Referer()).Int("status", c.Writer.Status()).Dur("latency-ms", timeStamp.Sub(start).Round(time.Millisecond)).Int64("bytes-received", c.Request.ContentLength).
-		Int("bytes-sent", c.Writer.Size()).Msg("request")
 }
 
 // setRequestMetadata sets the request metadata in the logger

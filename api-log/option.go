@@ -13,18 +13,20 @@ import (
 // save people from explicitly calling getctxlogger instead let the logging library get it from gin context in each of .info .debug .error .warn .fatal
 
 type options struct {
-	ServiceName  string
-	Level        zerolog.Level
-	OutputWriter io.Writer
-	Version      string
+	ServiceName    string
+	Level          zerolog.Level
+	OutputWriter   io.Writer
+	Version        string
+	SamplingConfig *SamplingConfig
 }
 
 func defaultLoggerOptions() options {
 	return options{
-		ServiceName:  "dummy",
-		Level:        zerolog.InfoLevel,
-		OutputWriter: os.Stdout,
-		Version:      "",
+		ServiceName:    "dummy",
+		Level:          zerolog.InfoLevel,
+		OutputWriter:   os.Stdout,
+		Version:        "",
+		SamplingConfig: nil, // No sampling by default
 	}
 }
 
@@ -51,5 +53,21 @@ func WithOutputWriter(w io.Writer) loggerOption {
 func WithVersion(n string) loggerOption {
 	return func(o *options) {
 		o.Version = n
+	}
+}
+
+// WithSampling configures log sampling to reduce log volume.
+// Pass nil to disable sampling (default behavior).
+//
+// Example:
+//   samplingConfig := &log.SamplingConfig{
+//       LevelRates: map[zerolog.Level]float64{
+//           zerolog.DebugLevel: 0.1,  // Sample 10% of debug logs
+//       },
+//   }
+//   factory.Create(log.WithSampling(samplingConfig))
+func WithSampling(config *SamplingConfig) loggerOption {
+	return func(o *options) {
+		o.SamplingConfig = config
 	}
 }

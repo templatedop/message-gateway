@@ -508,6 +508,265 @@ func TestEventAPI_WithGinContext(t *testing.T) {
 	InfoEvent(c).Str("endpoint", "/test").Msg("handling request")
 }
 
+// Tests for WithFields API
+
+func TestDebugWithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	DebugWithFields(nil, "processing user", map[string]interface{}{
+		"user_id": "123",
+		"action":  "login",
+		"count":   42,
+	})
+
+	output := buf.String()
+	if !contains(output, "processing user") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "123") {
+		t.Error("user_id field should be logged")
+	}
+	if !contains(output, "login") {
+		t.Error("action field should be logged")
+	}
+	if !contains(output, "42") {
+		t.Error("count field should be logged")
+	}
+}
+
+func TestInfoWithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	InfoWithFields(nil, "user logged in", map[string]interface{}{
+		"user_id": "456",
+		"ip":      "192.168.1.1",
+		"success": true,
+	})
+
+	output := buf.String()
+	if !contains(output, "user logged in") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "456") {
+		t.Error("user_id field should be logged")
+	}
+	if !contains(output, "192.168.1.1") {
+		t.Error("ip field should be logged")
+	}
+	if !contains(output, "true") {
+		t.Error("success field should be logged")
+	}
+}
+
+func TestWarnWithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	WarnWithFields(nil, "rate limit approaching", map[string]interface{}{
+		"attempts": 4,
+		"limit":    5,
+		"rate":     0.8,
+	})
+
+	output := buf.String()
+	if !contains(output, "rate limit approaching") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "4") {
+		t.Error("attempts field should be logged")
+	}
+	if !contains(output, "5") {
+		t.Error("limit field should be logged")
+	}
+}
+
+func TestErrorWithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	testErr := &testError{msg: "connection timeout"}
+	ErrorWithFields(nil, "database query failed", map[string]interface{}{
+		"error":    testErr,
+		"query":    "SELECT * FROM users",
+		"duration": 5000,
+	})
+
+	output := buf.String()
+	if !contains(output, "database query failed") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "connection timeout") {
+		t.Error("error field should be logged")
+	}
+	if !contains(output, "SELECT") {
+		t.Error("query field should be logged")
+	}
+}
+
+func TestCriticalWithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	CriticalWithFields(nil, "service unavailable", map[string]interface{}{
+		"service":   "payment-gateway",
+		"available": false,
+		"attempts":  3,
+	})
+
+	output := buf.String()
+	if !contains(output, "service unavailable") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "payment-gateway") {
+		t.Error("service field should be logged")
+	}
+	if !contains(output, "false") {
+		t.Error("available field should be logged")
+	}
+}
+
+func TestWithFields_MultipleTypes(t *testing.T) {
+	buf := setupTestLogger()
+
+	InfoWithFields(nil, "complex data", map[string]interface{}{
+		"string_field":  "value",
+		"int_field":     42,
+		"int64_field":   int64(9876543210),
+		"float_field":   3.14159,
+		"bool_field":    true,
+		"strings_field": []string{"a", "b", "c"},
+	})
+
+	output := buf.String()
+	if !contains(output, "complex data") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "value") {
+		t.Error("string field should be logged")
+	}
+	if !contains(output, "42") {
+		t.Error("int field should be logged")
+	}
+	if !contains(output, "3.14159") {
+		t.Error("float field should be logged")
+	}
+}
+
+// Tests for Tags support
+
+func TestWithTags(t *testing.T) {
+	buf := setupTestLogger()
+
+	ctx := WithTags(context.Background(), "database", "payment")
+
+	InfoEvent(ctx).Msg("processing transaction")
+
+	output := buf.String()
+	if !contains(output, "database") {
+		t.Error("database tag should be logged")
+	}
+	if !contains(output, "payment") {
+		t.Error("payment tag should be logged")
+	}
+}
+
+func TestWithTags_Multiple(t *testing.T) {
+	buf := setupTestLogger()
+
+	ctx := WithTags(context.Background(), "tag1", "tag2")
+	ctx = WithTags(ctx, "tag3")
+
+	InfoEvent(ctx).Msg("test message")
+
+	output := buf.String()
+	if !contains(output, "tag1") {
+		t.Error("tag1 should be logged")
+	}
+	if !contains(output, "tag2") {
+		t.Error("tag2 should be logged")
+	}
+	if !contains(output, "tag3") {
+		t.Error("tag3 should be logged")
+	}
+}
+
+func TestWithTags_SimpleAPI(t *testing.T) {
+	buf := setupTestLogger()
+
+	ctx := WithTags(context.Background(), "api", "auth")
+
+	Info(ctx, "user authenticated")
+
+	output := buf.String()
+	if !contains(output, "api") {
+		t.Error("api tag should be logged")
+	}
+	if !contains(output, "auth") {
+		t.Error("auth tag should be logged")
+	}
+}
+
+func TestWithTags_WithFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	ctx := WithTags(context.Background(), "database")
+
+	InfoWithFields(ctx, "query executed", map[string]interface{}{
+		"table": "users",
+		"rows":  10,
+	})
+
+	output := buf.String()
+	if !contains(output, "database") {
+		t.Error("database tag should be logged")
+	}
+	if !contains(output, "users") {
+		t.Error("table field should be logged")
+	}
+	if !contains(output, "10") {
+		t.Error("rows field should be logged")
+	}
+}
+
+func TestGetTags_NilContext(t *testing.T) {
+	tags := GetTags(nil)
+
+	if tags != nil {
+		t.Error("GetTags should return nil for nil context")
+	}
+}
+
+func TestGetTags_NoTags(t *testing.T) {
+	ctx := context.Background()
+	tags := GetTags(ctx)
+
+	if tags != nil {
+		t.Error("GetTags should return nil when no tags are present")
+	}
+}
+
+func TestGetTags_WithTags(t *testing.T) {
+	ctx := WithTags(context.Background(), "tag1", "tag2")
+	tags := GetTags(ctx)
+
+	if len(tags) != 2 {
+		t.Errorf("Expected 2 tags, got %d", len(tags))
+	}
+	if tags[0] != "tag1" || tags[1] != "tag2" {
+		t.Errorf("Expected [tag1, tag2], got %v", tags)
+	}
+}
+
+func TestWithTags_NilContext(t *testing.T) {
+	ctx := WithTags(nil, "tag1")
+
+	if ctx == nil {
+		t.Error("WithTags should create a context when given nil")
+	}
+
+	tags := GetTags(ctx)
+	if len(tags) != 1 || tags[0] != "tag1" {
+		t.Error("Tag should be added to new context")
+	}
+}
+
 // Helper functions
 
 func contains(s, substr string) bool {

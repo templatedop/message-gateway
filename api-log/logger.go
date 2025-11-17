@@ -15,10 +15,18 @@ const (
 	noop    = "noop"
 	test    = "test"
 	console = "console"
+	tagsKey = "tags" // Key for tags in log entries
+)
+
+type contextKey string
+
+const (
+	logTagsContextKey contextKey = "log_tags"
 )
 
 var (
-	baseLogger *Logger
+	baseLogger     *Logger
+	samplingConfig *SamplingConfig
 )
 
 type Logger struct {
@@ -83,6 +91,77 @@ func Fatal(ctx context.Context, message interface{}, args ...interface{}) {
 	panic("fatal error occurred") // Using panic instead of os.Exit for better testability
 }
 
+// DebugWithFields logs a debug message with structured fields.
+// This is a convenience function that combines simple message logging with structured fields.
+//
+// Example:
+//   log.DebugWithFields(ctx, "processing user", map[string]interface{}{
+//       "user_id": "123",
+//       "action": "login",
+//   })
+func DebugWithFields(ctx context.Context, message string, fields map[string]interface{}) {
+	event := getEventLoggerWithSkip(ctx, zerolog.DebugLevel, 3)
+	addFieldsToEvent(event, fields)
+	event.Msg(message)
+}
+
+// InfoWithFields logs an info message with structured fields.
+// This is a convenience function that combines simple message logging with structured fields.
+//
+// Example:
+//   log.InfoWithFields(ctx, "user logged in", map[string]interface{}{
+//       "user_id": "123",
+//       "ip": "192.168.1.1",
+//   })
+func InfoWithFields(ctx context.Context, message string, fields map[string]interface{}) {
+	event := getEventLoggerWithSkip(ctx, zerolog.InfoLevel, 3)
+	addFieldsToEvent(event, fields)
+	event.Msg(message)
+}
+
+// WarnWithFields logs a warning message with structured fields.
+// This is a convenience function that combines simple message logging with structured fields.
+//
+// Example:
+//   log.WarnWithFields(ctx, "rate limit approaching", map[string]interface{}{
+//       "attempts": 4,
+//       "limit": 5,
+//   })
+func WarnWithFields(ctx context.Context, message string, fields map[string]interface{}) {
+	event := getEventLoggerWithSkip(ctx, zerolog.WarnLevel, 3)
+	addFieldsToEvent(event, fields)
+	event.Msg(message)
+}
+
+// ErrorWithFields logs an error message with structured fields.
+// This is a convenience function that combines simple message logging with structured fields.
+//
+// Example:
+//   log.ErrorWithFields(ctx, "database query failed", map[string]interface{}{
+//       "error": err,
+//       "query": sql,
+//       "duration": elapsed,
+//   })
+func ErrorWithFields(ctx context.Context, message string, fields map[string]interface{}) {
+	event := getEventLoggerWithSkip(ctx, zerolog.ErrorLevel, 3)
+	addFieldsToEvent(event, fields)
+	event.Msg(message)
+}
+
+// CriticalWithFields logs a critical message with structured fields.
+// This is a convenience function that combines simple message logging with structured fields.
+//
+// Example:
+//   log.CriticalWithFields(ctx, "service unavailable", map[string]interface{}{
+//       "service": "payment-gateway",
+//       "error": err,
+//   })
+func CriticalWithFields(ctx context.Context, message string, fields map[string]interface{}) {
+	event := getEventLoggerWithSkip(ctx, zerolog.FatalLevel, 3)
+	addFieldsToEvent(event, fields)
+	event.Msg(message)
+}
+
 // DebugEvent returns a zerolog.Event for structured logging at Debug level.
 // This allows adding fields before calling Msg() to log the event.
 //
@@ -141,12 +220,27 @@ func getEventLoggerWithSkip(ctx context.Context, level zerolog.Level, skipFrames
 		logger = getDefaultLogger()
 	}
 
+	// Check sampling config to determine if this log should be emitted
+	tags := GetTags(ctx)
+	if samplingConfig != nil && !samplingConfig.ShouldLog(level, tags) {
+		// Return a disabled event that will not log anything
+		nopLogger := zerolog.Nop()
+		return nopLogger.WithLevel(level)
+	}
+
 	// Add caller information with correct skip frame count
 	// skipFrames should be:
 	// - 2 for direct Event API usage: getEventLoggerWithSkip -> InfoEvent -> caller
 	// - 3 for simple API usage: getEventLoggerWithSkip -> Info -> caller
 	lw := logger.logger.With().CallerWithSkipFrameCount(zerolog.CallerSkipFrameCount + skipFrames).Logger()
-	return lw.WithLevel(level)
+	event := lw.WithLevel(level)
+
+	// Add tags from context if present
+	if len(tags) > 0 {
+		event.Strs(tagsKey, tags)
+	}
+
+	return event
 }
 
 // logWithEvent handles message formatting and logging via a zerolog.Event.
@@ -171,5 +265,89 @@ func logWithEvent(event *zerolog.Event, message interface{}, args ...interface{}
 	default:
 		// Handle unexpected types
 		event.Msgf("message %v has unknown type %T", message, message)
+	}
+}
+
+// WithTags adds tags to the context. Tags are automatically included in all log entries
+// created with this context.
+//
+// Example:
+//   ctx = log.WithTags(ctx, "database", "payment")
+//   log.Info(ctx, "processing transaction") // Will include tags: ["database", "payment"]
+func WithTags(ctx context.Context, tags ...string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	existingTags := GetTags(ctx)
+	// Pre-allocate slice to avoid growth
+	allTags := make([]string, 0, len(existingTags)+len(tags))
+	allTags = append(allTags, existingTags...)
+	allTags = append(allTags, tags...)
+
+	return context.WithValue(ctx, logTagsContextKey, allTags)
+}
+
+// GetTags retrieves tags from the context.
+// Returns an empty slice if no tags are present.
+func GetTags(ctx context.Context) []string {
+	if ctx == nil {
+		return nil
+	}
+
+	if tags, ok := ctx.Value(logTagsContextKey).([]string); ok {
+		return tags
+	}
+
+	return nil
+}
+
+// addFieldsToEvent adds all fields from a map to a zerolog.Event.
+// This helper function handles type conversion for common Go types.
+func addFieldsToEvent(event *zerolog.Event, fields map[string]interface{}) {
+	for key, value := range fields {
+		switch v := value.(type) {
+		case string:
+			event.Str(key, v)
+		case int:
+			event.Int(key, v)
+		case int64:
+			event.Int64(key, v)
+		case int32:
+			event.Int32(key, v)
+		case int16:
+			event.Int16(key, v)
+		case int8:
+			event.Int8(key, v)
+		case uint:
+			event.Uint(key, v)
+		case uint64:
+			event.Uint64(key, v)
+		case uint32:
+			event.Uint32(key, v)
+		case uint16:
+			event.Uint16(key, v)
+		case uint8:
+			event.Uint8(key, v)
+		case float64:
+			event.Float64(key, v)
+		case float32:
+			event.Float32(key, v)
+		case bool:
+			event.Bool(key, v)
+		case error:
+			event.Err(v)
+		case []string:
+			event.Strs(key, v)
+		case []int:
+			event.Ints(key, v)
+		case []int64:
+			event.Ints64(key, v)
+		case nil:
+			// Skip nil values
+		default:
+			// For complex types, use Interface which will JSON marshal
+			event.Interface(key, v)
+		}
 	}
 }
