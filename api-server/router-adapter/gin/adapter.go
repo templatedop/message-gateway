@@ -32,6 +32,7 @@ type GinAdapter struct {
 	server       *http.Server
 	config       *routeradapter.RouterConfig
 	errorHandler routeradapter.ErrorHandler
+	ctx          context.Context // Signal-aware application context
 	mu           sync.RWMutex
 }
 
@@ -197,6 +198,14 @@ func (a *GinAdapter) Start(addr string) error {
 		IdleTimeout:       a.config.IdleTimeout,
 		ReadHeaderTimeout: a.config.ReadHeaderTimeout,
 		MaxHeaderBytes:    a.config.MaxHeaderBytes,
+		// BaseContext provides the signal-aware context to all HTTP handlers
+		// This allows handlers to detect shutdown signals via req.Context()
+		BaseContext: func(net.Listener) context.Context {
+			if a.ctx != nil {
+				return a.ctx
+			}
+			return context.Background()
+		},
 	}
 
 	// Start server in a goroutine
@@ -244,6 +253,14 @@ func (a *GinAdapter) Server() *http.Server {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.server
+}
+
+// SetContext sets the signal-aware context for the router
+// This context will be propagated to all HTTP handlers via BaseContext
+func (a *GinAdapter) SetContext(ctx context.Context) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.ctx = ctx
 }
 
 // SetErrorHandler sets custom error handler for the router

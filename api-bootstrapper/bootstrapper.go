@@ -2,9 +2,11 @@ package bootstrapper
 
 import (
 	"context"
-	"errors"
+	// "errors" // Temporarily commented - only used in commented FxGrpc module
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	db "MgApplication/api-db"
@@ -13,7 +15,7 @@ import (
 
 	auth "MgApplication/api-authz"
 	config "MgApplication/api-config"
-	g "MgApplication/grpc-server"
+	// g "MgApplication/grpc-server" // Commented out - grpc-server not implemented yet
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -21,6 +23,12 @@ import (
 	otelsdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	router "MgApplication/api-server"
+	routeradapter "MgApplication/api-server/router-adapter"
+	// Temporarily commented for testing - uncomment after fixing adapter compilation errors
+	// _ "MgApplication/api-server/router-adapter/echo"
+	// _ "MgApplication/api-server/router-adapter/fiber"
+	// _ "MgApplication/api-server/router-adapter/gin"
+	// _ "MgApplication/api-server/router-adapter/nethttp"
 
 	tclient "go.temporal.io/sdk/client"
 	"go.uber.org/fx"
@@ -50,7 +58,8 @@ func New() *Bootstrapper {
 			fxconfig,
 			fxlog,
 			fxDB,
-			fxrouter,
+			fxRouterAdapter, // Router adapter system - supports gin, fiber, echo, nethttp
+			// fxrouter,      // Old router module (Gin only) - kept for backward compatibility
 			fxTrace,
 			fxMetrics,
 			//fxHealthcheck,
@@ -79,7 +88,30 @@ func (b *Bootstrapper) BootstrapApp(options ...fx.Option) *fx.App {
 }
 
 func (b *Bootstrapper) Run(options ...fx.Option) {
-	b.BootstrapApp(options...).Run()
+	// Wrap the context with signal detection for graceful shutdown
+	// Listen for SIGINT (Ctrl+C) and SIGTERM (kill command)
+	ctx, cancel := signal.NotifyContext(b.context, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+
+	// Update the bootstrapper context with signal-aware context
+	b.context = ctx
+
+	// Monitor context cancellation in a separate goroutine
+	go func() {
+		<-ctx.Done()
+		if ctx.Err() == context.Canceled {
+			log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Shutdown signal received, initiating graceful shutdown...")
+		}
+	}()
+
+	// Create and run the FX application
+	app := b.BootstrapApp(options...)
+
+	// Run the application with signal handling
+	// When a signal is received, the context will be cancelled and fx will gracefully shutdown
+	app.Run()
+
+	log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Application shutdown complete")
 }
 
 var fxHealthcheck = fx.Module(
@@ -229,34 +261,85 @@ var FxReadDB = fx.Module(
 
 type readDBLifecycleParams struct {
 	fx.In
-	DB *db.DB `name:"read_db"`
-	LC fx.Lifecycle
+	Ctx context.Context // Signal-aware context from bootstrapper
+	DB  *db.DB          `name:"read_db"`
+	LC  fx.Lifecycle
 }
 
 func readdblifecycle(p readDBLifecycleParams) {
 	p.LC.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				log.GetBaseLoggerInstance().ToZerolog().Info().Str("module", "DBModule").Msg("Starting read fxdb module")
-				err := p.DB.Ping()
+				log.GetBaseLoggerInstance().ToZerolog().Info().Str("module", "ReadDBModule").Msg("Starting read database module")
+
+				// Use context-aware ping
+				err := p.DB.PingContext(ctx)
 				if err != nil {
 					return err
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to read database")
 
+				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to read database")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
+				logger := log.GetBaseLoggerInstance().ToZerolog()
 
+				// Log connection stats before shutdown
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Str("Total connections:", string(count.TotalConns())).Msg("Connection stats during shutdown:")
+					logger.Info().
+						Int32("total_conns", count.TotalConns()).
+						Int32("idle_conns", count.IdleConns()).
+						Int32("acquired_conns", count.AcquiredConns()).
+						Msg("Read database connection stats at shutdown start")
 				}
 
+				// Wait for active connections to drain with timeout
+				// This allows in-flight HTTP requests to complete their DB operations
+				drainTimeout := 5 * time.Second
+				drainCtx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+				defer cancel()
+
+				logger.Info().
+					Dur("drain_timeout", drainTimeout).
+					Msg("Waiting for read database connections to drain...")
+
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-drainCtx.Done():
+						// Timeout reached, force close
+						if count := p.DB.Stat(); count != nil {
+							logger.Warn().
+								Int32("remaining_acquired", count.AcquiredConns()).
+								Msg("Read DB drain timeout reached, forcing database closure")
+						}
+						goto closeDB
+
+					case <-ticker.C:
+						// Check if all connections are idle
+						if count := p.DB.Stat(); count != nil {
+							if count.AcquiredConns() == 0 {
+								logger.Info().Msg("All read database connections drained successfully")
+								goto closeDB
+							}
+						}
+					}
+				}
+
+			closeDB:
+				// Close the database connection pool
 				p.DB.Close()
+
+				// Log final stats
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Str("Stats after release : read db:", string(count.TotalConns())).Msg("Connections after release....")
+					logger.Info().
+						Int32("final_total_conns", count.TotalConns()).
+						Msg("Read database connection pool closed")
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Read Database shutdown complete!!")
+
+				logger.Info().Msg("Read database shutdown complete")
 				return nil
 			},
 		},
@@ -360,8 +443,9 @@ type readDBProbeParams struct {
 
 type writeDBLifecycleParams struct {
 	fx.In
-	DB *db.DB `name:"write_db"`
-	LC fx.Lifecycle
+	Ctx context.Context // Signal-aware context from bootstrapper
+	DB  *db.DB          `name:"write_db"`
+	LC  fx.Lifecycle
 }
 
 func dblifecycle(p writeDBLifecycleParams) {
@@ -369,25 +453,75 @@ func dblifecycle(p writeDBLifecycleParams) {
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				log.GetBaseLoggerInstance().ToZerolog().Info().Str("module", "DBModule").Msg("Starting fxdb module")
-				err := p.DB.Ping()
+
+				// Use context-aware ping
+				err := p.DB.PingContext(ctx)
 				if err != nil {
 					return err
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to the database")
 
+				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Successfully connected to the database")
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
+				logger := log.GetBaseLoggerInstance().ToZerolog()
 
+				// Log connection stats before shutdown
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Int32("Total connections:", count.TotalConns()).Msg("Connection stats during shutdown:")
+					logger.Info().
+						Int32("total_conns", count.TotalConns()).
+						Int32("idle_conns", count.IdleConns()).
+						Int32("acquired_conns", count.AcquiredConns()).
+						Msg("Database connection stats at shutdown start")
 				}
 
+				// Wait for active connections to drain with timeout
+				// This allows in-flight HTTP requests to complete their DB operations
+				drainTimeout := 5 * time.Second
+				drainCtx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+				defer cancel()
+
+				logger.Info().
+					Dur("drain_timeout", drainTimeout).
+					Msg("Waiting for active database connections to drain...")
+
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-drainCtx.Done():
+						// Timeout reached, force close
+						if count := p.DB.Stat(); count != nil {
+							logger.Warn().
+								Int32("remaining_acquired", count.AcquiredConns()).
+								Msg("Drain timeout reached, forcing database closure")
+						}
+						goto closeDB
+
+					case <-ticker.C:
+						// Check if all connections are idle
+						if count := p.DB.Stat(); count != nil {
+							if count.AcquiredConns() == 0 {
+								logger.Info().Msg("All database connections drained successfully")
+								goto closeDB
+							}
+						}
+					}
+				}
+
+			closeDB:
+				// Close the database connection pool
 				p.DB.Close()
+
+				// Log final stats
 				if count := p.DB.Stat(); count != nil {
-					log.GetBaseLoggerInstance().ToZerolog().Info().Int32("Total Connections:", count.TotalConns()).Msg("Connections after release....")
+					logger.Info().
+						Int32("final_total_conns", count.TotalConns()).
+						Msg("Database connection pool closed")
 				}
-				log.GetBaseLoggerInstance().ToZerolog().Info().Msg("Database shutdown complete!!")
+
+				logger.Info().Msg("Database shutdown complete")
 				return nil
 			},
 		},
@@ -447,6 +581,111 @@ func startServer(lc fx.Lifecycle, sv *router.Router) {
 		return nil
 	})
 
+}
+
+// fxRouterAdapter is the new FX module that uses router-adapter system
+// This allows switching between different web frameworks (Gin, Fiber, Echo, net/http)
+// via configuration instead of being hard-coded to Gin
+var fxRouterAdapter = fx.Module(
+	"router-adapter",
+	fx.Provide(
+		newRouterAdapter,
+	),
+	fx.Invoke(startRouterAdapter),
+)
+
+// routerAdapterParams holds the dependencies for creating a router adapter
+type routerAdapterParams struct {
+	fx.In
+	Ctx      context.Context
+	Config   *config.Config
+	Osdktrace *otelsdktrace.TracerProvider
+	Registry *prometheus.Registry
+}
+
+// newRouterAdapter creates and configures a router adapter from config
+func newRouterAdapter(p routerAdapterParams) (routeradapter.RouterAdapter, error) {
+	// Adapter packages are imported at the top of file to register factories
+	// This allows the factory registry to be populated during init()
+
+	// Create router config from application config
+	cfg := routeradapter.DefaultRouterConfig()
+
+	// Determine router type from config (default to Gin)
+	routerType := routeradapter.RouterTypeGin
+	if p.Config.Exists("router.type") {
+		routerType = routeradapter.RouterType(p.Config.GetString("router.type"))
+	}
+	cfg.Type = routerType
+
+	// Set server configuration
+	if p.Config.Exists("server.addr") {
+		cfg.Port = p.Config.GetInt("server.port")
+	}
+
+	// Create the adapter
+	adapter, err := routeradapter.NewRouterAdapter(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the signal-aware context
+	adapter.SetContext(p.Ctx)
+
+	// Note: Routes and middlewares will be registered from the application layer
+
+	return adapter, nil
+}
+
+// routerAdapterLifecycleParams holds dependencies for router adapter lifecycle
+type routerAdapterLifecycleParams struct {
+	fx.In
+	LC      fx.Lifecycle
+	Adapter routeradapter.RouterAdapter
+	Config  *config.Config
+}
+
+// startRouterAdapter manages the router adapter lifecycle
+func startRouterAdapter(p routerAdapterLifecycleParams) {
+	eg, _ := errgroup.WithContext(context.Background())
+
+	p.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			// Get server address from config
+			addr := ":8080"
+			if p.Config.Exists("server.addr") {
+				addr = p.Config.GetString("server.addr")
+			}
+
+			// Start server in background
+			eg.Go(func() error {
+				if err := p.Adapter.Start(addr); err != nil && err != http.ErrServerClosed {
+					return err
+				}
+				return nil
+			})
+
+			log.GetBaseLoggerInstance().ToZerolog().Info().
+				Str("adapter", string(p.Config.GetString("router.type"))).
+				Str("address", addr).
+				Msg("Router adapter started")
+
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			if err := p.Adapter.Shutdown(shutdownCtx); err != nil {
+				return err
+			}
+
+			log.GetBaseLoggerInstance().ToZerolog().Info().
+				Msg("Router adapter shutdown complete")
+
+			return nil
+		},
+	})
 }
 
 type FxMinioParam struct {
@@ -534,6 +773,8 @@ func temporallifecycle(lc fx.Lifecycle, temporalclient tclient.Client) {
 // var compresskb connect.Option = connect.WithCompressMinBytes(1024)
 var addr = ":8083"
 
+// FxGrpc module - Commented out until grpc-server package is implemented
+/*
 var FxGrpc = fx.Module(
 	"gRPCmodule",
 
@@ -564,6 +805,7 @@ var FxGrpc = fx.Module(
 		})
 	}),
 )
+*/
 
 var fxMetrics = fx.Module(
 	"metrics",

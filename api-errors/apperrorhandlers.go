@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -15,6 +14,25 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// respondWithError is a helper function to reduce code duplication in error handlers.
+// It creates an AppError and APIErrorResponse, then sends the JSON response.
+//
+// Parameters:
+//   - ctx: The Gin context for the current request.
+//   - statusCodeAndMessage: The HTTP status code and message configuration.
+//   - message: The error message to include in the AppError.
+//   - err: The original error (can be nil).
+func respondWithError(
+	ctx *gin.Context,
+	statusCodeAndMessage statusCodeAndMessage,
+	message string,
+	err error,
+) {
+	appError := NewAppError(message, statusCodeAndMessage.StatusCode, err)
+	apiErrorResponse := NewHTTPAPIErrorResponse(statusCodeAndMessage, appError)
+	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+}
 
 // HandleNoRouteError handles requests to non-existent routes.
 // It creates an application error with a 404 status code and a message indicating
@@ -27,9 +45,7 @@ import (
 // Returns:
 //   - HTTP 404 Not Found
 func HandleNoRouteError(ctx *gin.Context) {
-	appError := NewAppError("The requested path does not exist", "404", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorNotFound, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorNotFound, "The requested path does not exist", nil)
 }
 
 // HandleNoMethodError handles HTTP requests with unsupported methods.
@@ -42,9 +58,7 @@ func HandleNoRouteError(ctx *gin.Context) {
 // Returns:
 //   - HTTP 405 HTTP method not supported
 func HandleNoMethodError(ctx *gin.Context) {
-	appError := NewAppError("The requested HTTP method is not allowed for this path", "405", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorMethodNotAllowed, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorMethodNotAllowed, "The requested HTTP method is not allowed for this path", nil)
 }
 
 // HandleBindingError handles errors that occur during the binding process in a Gin context.
@@ -64,22 +78,19 @@ func HandleBindingError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	var appErr *AppError
 	if appErr, ok := Find[*AppError](err); ok {
-
-		// if errors.As(err, &appErr) {
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorBadRequest, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		return
 	}
 
-	// Check if the error is a validator.ValidationErrors.
-	// var ve validator.ValidationErrors
-	// if errors.As(err, &ve) {
-	if ve, ok := Find[validator.ValidationErrors](err); ok {
+	// Declare appErr for use in subsequent branches
+	var appErr *AppError
 
+	// Check if the error is a validator.ValidationErrors.
+	if ve, ok := Find[validator.ValidationErrors](err); ok {
 		// Create a new AppError for a binding error.
-		newAppErr := NewAppError("Binding error", strconv.Itoa(http.StatusBadRequest), err)
+		newAppErr := NewAppError("Binding error", http.StatusBadRequest, err)
 		appErr = &newAppErr // Get a pointer to the newly created AppError
 
 		// Extract field-specific errors.
@@ -107,9 +118,9 @@ func HandleBindingError(ctx *gin.Context, err error) {
 		_, isInvalidUnmarshalError := Find[*json.InvalidUnmarshalError](err)
 
 		switch {
-		case isSyntaxError, errors.Is(err, io.ErrUnexpectedEOF), isInvalidUnmarshalError:
+		case isSyntaxError, Is(err, io.ErrUnexpectedEOF), isInvalidUnmarshalError:
 			errMsg = "Malformed JSON: Check for missing or extra braces, commas, or quotes."
-		case errors.Is(err, io.EOF):
+		case Is(err, io.EOF):
 			errMsg = "Body cannot be empty"
 		case isUnmarshalTypeError:
 			if unmarshalTypeError.Field != "" {
@@ -128,7 +139,7 @@ func HandleBindingError(ctx *gin.Context, err error) {
 		}
 
 		er := errors.New(errMsg)
-		newAppErr := NewAppError(fmt.Sprintf("Binding error: %v", er), strconv.Itoa(http.StatusBadRequest), er)
+		newAppErr := NewAppError(fmt.Sprintf("Binding error: %v", er), http.StatusBadRequest, er)
 		appErr = &newAppErr
 	}
 
@@ -154,7 +165,7 @@ func HandleValidationError(ctx *gin.Context, err error) {
 	// appError, ok := err.(*AppError)
 	appError, ok := Find[*AppError](err)
 	if !ok {
-		apperror := NewAppError(err.Error(), strconv.Itoa(http.StatusUnprocessableEntity), err)
+		apperror := NewAppError(err.Error(), http.StatusUnprocessableEntity, err)
 		apiErrorResponse := NewHTTPAPIErrorResponse(AppErrorValidationError, apperror)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		return
@@ -187,15 +198,8 @@ func HandleDBError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	var appErr *AppError
-	if errors.As(err, &appErr) {
-		statusCode, convErr := strconv.Atoi(appErr.Code)
-		if convErr != nil {
-			apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
-			ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
-			return
-		}
-
+	if appErr, ok := Find[*AppError](err); ok {
+		statusCode := appErr.Code
 		statusCodeAndMessage := mapErrorToHTTP(statusCode)
 
 		apiErrorResponse := NewHTTPAPIErrorResponse(statusCodeAndMessage, *appErr)
@@ -207,87 +211,86 @@ func HandleDBError(ctx *gin.Context, err error) {
 
 	// Handle specific PostgreSQL error types using a switch statement.
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
-		appError = NewAppError(DBConnectionException.Message, DBConnectionException.Code, err)
+	case Is(err, context.DeadlineExceeded):
+		appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
-	case errors.Is(err, pgx.ErrNoRows):
-		appError = NewAppError(DBNoData.Message, DBNoData.Code, err)
+	case Is(err, pgx.ErrNoRows):
+		appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 		apiErrorResponse := NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 	default:
 		// Check if the error is a PostgreSQL error.
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := Find[*pgconn.PgError](err); ok {
 			// Map PostgreSQL error codes to custom dbError codes and messages.
 			switch {
 
 			case pgErr.Code == "42P01": // SQLSTATE for "relation does not exist"
-				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.Code, err)
+				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsCardinalityViolation(pgErr.Code):
-				appError = NewAppError(DBCardinalityViolation.Message, DBCardinalityViolation.Code, err)
+				appError = NewAppError(DBCardinalityViolation.Message, DBCardinalityViolation.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsWarning(pgErr.Code):
-				appError = NewAppError(DBWarning.Message, DBWarning.Code, err)
+				appError = NewAppError(DBWarning.Message, DBWarning.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsNoData(pgErr.Code):
-				appError = NewAppError(DBNoData.Message, DBNoData.Code, err)
+				appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsIntegrityConstraintViolation(pgErr.Code):
-				appError = NewAppError(DBIntegrityConstraintViolation.Message, DBIntegrityConstraintViolation.Code, err)
+				appError = NewAppError(DBIntegrityConstraintViolation.Message, DBIntegrityConstraintViolation.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(DBErrorDuplicateRecord, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsSQLStatementNotYetComplete(pgErr.Code):
-				appError = NewAppError(DBSQLStatementNotYetComplete.Message, DBSQLStatementNotYetComplete.Code, err)
+				appError = NewAppError(DBSQLStatementNotYetComplete.Message, DBSQLStatementNotYetComplete.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsConnectionException(pgErr.Code):
-				appError = NewAppError(DBConnectionException.Message, DBConnectionException.Code, err)
+				appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServiceUnavailable, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsDataException(pgErr.Code):
-				appError = NewAppError(DBDataException.Message, DBDataException.Code, err)
+				appError = NewAppError(DBDataException.Message, DBDataException.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorBadRequest, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsTransactionRollback(pgErr.Code):
-				appError = NewAppError(DBTransactionRollback.Message, DBTransactionRollback.Code, err)
+				appError = NewAppError(DBTransactionRollback.Message, DBTransactionRollback.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsSyntaxErrororAccessRuleViolation(pgErr.Code):
-				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.Code, err)
+				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsInsufficientResources(pgErr.Code):
-				appError = NewAppError(DBInsufficientResources.Message, DBInsufficientResources.Code, err)
+				appError = NewAppError(DBInsufficientResources.Message, DBInsufficientResources.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			// Catch any other PostgreSQL-related errors with a generic message.
 			default:
-				appError = NewAppError(DBGenericError.Message, DBGenericError.Code, err)
+				appError = NewAppError(DBGenericError.Message, DBGenericError.HTTPStatusCode, err)
 				apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 			}
 		} else {
 			// Handle non-database-related errors or unknown errors.
-			appError = NewAppError(err.Error(), strconv.Itoa(http.StatusInternalServerError), err)
+			appError = NewAppError(err.Error(), http.StatusInternalServerError, err)
 			apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 			ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		}
@@ -311,11 +314,8 @@ func HandleError(ctx *gin.Context, err error) {
 		return
 	}
 
-	// Initialize a variable for the appError to store the error details.
-	var appErr *AppError
-
 	// Check if the error is of type AppError.
-	if errors.As(err, &appErr) {
+	if appErr, ok := Find[*AppError](err); ok {
 		// Create a structured HTTP response using the AppError.
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
@@ -324,7 +324,7 @@ func HandleError(ctx *gin.Context, err error) {
 
 	// Handle other types of errors generically.
 	// Here you can log the error if needed.
-	appError := NewAppError(err.Error(), strconv.Itoa(http.StatusInternalServerError), err)
+	appError := NewAppError(err.Error(), http.StatusInternalServerError, err)
 	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 }
@@ -348,19 +348,15 @@ func HandleErrorWithCustomMessage(ctx *gin.Context, message string, err error) {
 		return
 	}
 
-	// Initialize a variable for the appError to store the error details.
-	// var appErr *AppError
+	// Check if the error is of type AppError.
 	if appErr, ok := Find[*AppError](err); ok {
-		// }
-		// Check if the error is of type AppError.
-		// if errors.As(err, &appErr) {
 		// Create a structured HTTP response using the AppError.
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		return
 	}
 
-	appError := NewAppError(message, strconv.Itoa(http.StatusInternalServerError), err)
+	appError := NewAppError(message, http.StatusInternalServerError, err)
 	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 }
@@ -380,9 +376,7 @@ func HandleErrorWithCustomMessage(ctx *gin.Context, message string, err error) {
 // It then creates an HTTP API error response using this application error and sends it as a JSON response
 // with the status code from the API error response.
 func HandleWithMessage(ctx *gin.Context, message string) {
-	appError := NewAppError(message, strconv.Itoa(http.StatusInternalServerError), nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorServerError, message, nil)
 }
 
 // HandleMarshalError handles errors that occur during marshaling.
@@ -401,9 +395,7 @@ func HandleMarshalError(ctx *gin.Context, err error) {
 		return
 	}
 
-	appError := NewAppError(err.Error(), strconv.Itoa(http.StatusBadRequest), err)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorBadRequest, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorBadRequest, err.Error(), err)
 }
 
 // ValidateContentType is a middleware function for the Gin framework that checks if the request's
@@ -431,9 +423,7 @@ func ValidateContentType(allowedTypes []string) gin.HandlerFunc {
 
 		// If not valid, return a structured error response.
 		if !validContentType {
-			appError := NewAppError(fmt.Sprintf("Supported types are: %v", allowedTypes), strconv.Itoa(http.StatusUnsupportedMediaType), nil)
-			apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorInvalidContentType, appError)
-			ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+			respondWithError(ctx, HTTPErrorInvalidContentType, fmt.Sprintf("Supported types are: %v", allowedTypes), nil)
 			ctx.Abort() // Prevent further handling of the request.
 			return
 		}
@@ -453,9 +443,7 @@ func ValidateContentType(allowedTypes []string) gin.HandlerFunc {
 //
 //	HTTP 413 File Too Large
 func HandleSizeError(ctx *gin.Context) {
-	appError := NewAppError("Payload too large.", "413", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(FileErrorTooLarge, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, FileErrorTooLarge, "Payload too large.", nil)
 }
 
 // HandleRateLimitingError handles rate limiting errors by creating an application error
@@ -468,9 +456,7 @@ func HandleSizeError(ctx *gin.Context) {
 //
 //	HTTP 429 Too Many Requests
 func HandleRateLimitingError(ctx *gin.Context) {
-	appError := NewAppError("Too many requests. Please try again later.", "429", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorTooManyRequests, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorTooManyRequests, "Too many requests. Please try again later.", nil)
 }
 
 // HandleDuplicateEntryError handles errors related to duplicate entries in the application.
@@ -484,9 +470,7 @@ func HandleRateLimitingError(ctx *gin.Context) {
 //
 //	HTTP 409 Conflict
 func HandleDuplicateEntryError(ctx *gin.Context) {
-	appError := NewAppError("Data conflict occurred while adding/updating. Resource already exists.", "409", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorConflict, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorConflict, "Data conflict occurred while adding/updating. Resource already exists.", nil)
 }
 
 // HandleConnectionError handles connection errors by creating an application error
@@ -505,9 +489,7 @@ func HandleDuplicateEntryError(ctx *gin.Context) {
 // API error response using this application error and sends it as a JSON response
 // with the appropriate status code.
 func HandleConnectionError(ctx *gin.Context, err error) {
-	appError := NewAppError("Service unavailable. Please try again later.", "503", err)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServiceUnavailable, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorServiceUnavailable, "Service unavailable. Please try again later.", err)
 }
 
 // HandleFileTypeError handles errors related to unsupported file types.
@@ -521,9 +503,7 @@ func HandleConnectionError(ctx *gin.Context, err error) {
 //
 //	HTTP 415 Invalid Content Type
 func HandleFileTypeError(ctx *gin.Context) {
-	appError := NewAppError("Unsupported file type.", "415", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorInvalidContentType, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorInvalidContentType, "Unsupported file type.", nil)
 }
 
 // HandleUnauthorizedError handles unauthorized access errors by creating an
@@ -540,9 +520,7 @@ func HandleFileTypeError(ctx *gin.Context) {
 // This function is typically used as a middleware or error handler to ensure
 // that unauthorized access attempts are properly reported to the client.
 func HandleUnauthorizedError(ctx *gin.Context) {
-	appError := NewAppError("Unauthorized access. Authentication is required.", "401", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorUnauthorized, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorUnauthorized, "Unauthorized access. Authentication is required.", nil)
 }
 
 // HandleUnauthorizedErrorWithDetail handles unauthorized errors by creating an
@@ -561,9 +539,7 @@ func HandleUnauthorizedError(ctx *gin.Context) {
 // creates an HTTP API error response with a 401 Unauthorized status code, and
 // sends the response as JSON.
 func HandleUnauthorizedErrorWithDetail(ctx *gin.Context, err error) {
-	appError := NewAppError(err.Error(), "401", err)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorUnauthorized, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorUnauthorized, err.Error(), err)
 }
 
 // HandleForbiddenError handles forbidden access errors by creating an
@@ -576,9 +552,7 @@ func HandleUnauthorizedErrorWithDetail(ctx *gin.Context, err error) {
 // Returns:
 //   - HTTP 403 Forbidden
 func HandleForbiddenError(ctx *gin.Context) {
-	appError := NewAppError("Access to this resource is forbidden. Insufficient permissions.", "403", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorForbidden, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorForbidden, "Access to this resource is forbidden. Insufficient permissions.", nil)
 }
 
 // HandleRequestTimeoutError handles request timeout errors by creating an application error
@@ -592,9 +566,7 @@ func HandleForbiddenError(ctx *gin.Context) {
 // Returns:
 //   - HTTP 408 Request Timeout
 func HandleRequestTimeoutError(ctx *gin.Context) {
-	appError := NewAppError("Request timed out.", "408", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorRequestTimeout, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorRequestTimeout, "Request timed out.", nil)
 }
 
 // HandleServiceUnavailableError handles server timeout errors by creating an
@@ -607,9 +579,7 @@ func HandleRequestTimeoutError(ctx *gin.Context) {
 // Returns:
 //   - HTTP 503 Service Unavailable
 func HandleServiceUnavailableError(ctx *gin.Context) {
-	appError := NewAppError("Server took too long to respond.", "503", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServiceUnavailable, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorServiceUnavailable, "Server took too long to respond.", nil)
 }
 
 // HandleGatewayTimeoutError handles the Gateway Timeout error (HTTP 504) by creating an
@@ -621,9 +591,7 @@ func HandleServiceUnavailableError(ctx *gin.Context) {
 // Returns:
 //   - HTTP 504 Gateway Timeout
 func HandleGatewayTimeoutError(ctx *gin.Context) {
-	appError := NewAppError("Server/Gateway timeout occurred.", "504", nil)
-	apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorGatewayTimeout, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, HTTPErrorGatewayTimeout, "Server/Gateway timeout occurred.", nil)
 }
 
 // HandleBulkErrors processes a slice of AppError and sends a JSON response with the appropriate HTTP status code.
@@ -651,7 +619,7 @@ func HandleBulkErrors(ctx *gin.Context, err []AppError) {
 // Returns:
 //   - AppError.
 func HandleErrorWithStatusCodeAndMessage(statusCodeAndMessage statusCodeAndMessage, message string, err error) *AppError {
-	appError := NewAppError(message, strconv.Itoa(statusCodeAndMessage.StatusCode), err)
+	appError := NewAppError(message, statusCodeAndMessage.StatusCode, err)
 	return &appError
 }
 
@@ -662,89 +630,86 @@ func checkDBError(err error) APIErrorResponse {
 
 	// Handle specific PostgreSQL error types using a switch statement.
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
-		appError = NewAppError(DBConnectionException.Message, DBConnectionException.Code, err)
+	case Is(err, context.DeadlineExceeded):
+		appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 		apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 		// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
-	case errors.Is(err, pgx.ErrNoRows):
-		appError = NewAppError(DBNoData.Message, DBNoData.Code, err)
+	case Is(err, pgx.ErrNoRows):
+		appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 		apiErrorResponse = NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 		// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 	default:
 		// Check if the error is a PostgreSQL error.
-		// var pgErr *pgconn.PgError
 		if pgErr, ok := Find[*pgconn.PgError](err); ok {
-			// }
-			// if errors.As(err, &pgErr) {
 			// Map PostgreSQL error codes to custom dbError codes and messages.
 			switch {
 
 			case pgErr.Code == "42P01": // SQLSTATE for "relation does not exist"
-				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.Code, err)
+				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsCardinalityViolation(pgErr.Code):
-				appError = NewAppError(DBCardinalityViolation.Message, DBCardinalityViolation.Code, err)
+				appError = NewAppError(DBCardinalityViolation.Message, DBCardinalityViolation.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsWarning(pgErr.Code):
-				appError = NewAppError(DBWarning.Message, DBWarning.Code, err)
+				appError = NewAppError(DBWarning.Message, DBWarning.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsNoData(pgErr.Code):
-				appError = NewAppError(DBNoData.Message, DBNoData.Code, err)
+				appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsIntegrityConstraintViolation(pgErr.Code):
-				appError = NewAppError(DBIntegrityConstraintViolation.Message, DBIntegrityConstraintViolation.Code, err)
+				appError = NewAppError(DBIntegrityConstraintViolation.Message, DBIntegrityConstraintViolation.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(DBErrorDuplicateRecord, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsSQLStatementNotYetComplete(pgErr.Code):
-				appError = NewAppError(DBSQLStatementNotYetComplete.Message, DBSQLStatementNotYetComplete.Code, err)
+				appError = NewAppError(DBSQLStatementNotYetComplete.Message, DBSQLStatementNotYetComplete.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsConnectionException(pgErr.Code):
-				appError = NewAppError(DBConnectionException.Message, DBConnectionException.Code, err)
+				appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServiceUnavailable, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsDataException(pgErr.Code):
-				appError = NewAppError(DBDataException.Message, DBDataException.Code, err)
+				appError = NewAppError(DBDataException.Message, DBDataException.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorBadRequest, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsTransactionRollback(pgErr.Code):
-				appError = NewAppError(DBTransactionRollback.Message, DBTransactionRollback.Code, err)
+				appError = NewAppError(DBTransactionRollback.Message, DBTransactionRollback.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsSyntaxErrororAccessRuleViolation(pgErr.Code):
-				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.Code, err)
+				appError = NewAppError(DBSyntaxErrororAccessRuleViolation.Message, DBSyntaxErrororAccessRuleViolation.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			case pgerrcode.IsInsufficientResources(pgErr.Code):
-				appError = NewAppError(DBInsufficientResources.Message, DBInsufficientResources.Code, err)
+				appError = NewAppError(DBInsufficientResources.Message, DBInsufficientResources.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
 			// Catch any other PostgreSQL-related errors with a generic message.
 			default:
-				appError = NewAppError(DBGenericError.Message, DBGenericError.Code, err)
+				appError = NewAppError(DBGenericError.Message, DBGenericError.HTTPStatusCode, err)
 				apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 				// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 			}
 		} else {
 			// Handle non-database-related errors or unknown errors.
-			appError = NewAppError(HTTPErrorServerError.Message, strconv.Itoa(http.StatusInternalServerError), err)
+			appError = NewAppError(HTTPErrorServerError.Message, http.StatusInternalServerError, err)
 			apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 			// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 		}
@@ -760,23 +725,13 @@ func HandleCommonError(ctx *gin.Context, err error) {
 	}
 
 	// Check if the error is of type AppError.
-	// var appErr *AppError
 	if appErr, ok := Find[*AppError](err); ok {
-		// }
-		// if errors.As(err, &appErr) {
-
 		if len(appErr.FieldErrors) > 0 {
 			HandleValidationError(ctx, err)
 			return
 		}
 
-		statusCode, convErr := strconv.Atoi(appErr.Code)
-		if convErr != nil {
-			apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, *appErr)
-			ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
-			return
-		}
-
+		statusCode := appErr.Code
 		statusCodeAndMessage := mapErrorToHTTP(statusCode)
 
 		apiErrorResponse := NewHTTPAPIErrorResponse(statusCodeAndMessage, *appErr)
@@ -800,7 +755,5 @@ func HandleCommonError(ctx *gin.Context, err error) {
 // Returns:
 //   - HTTP <statusCode>: The HTTP status code defined in the statusCodeAndMessage struct.
 func ErrorResponseWithStatusCodeAndMessage(ctx *gin.Context, statusCodeAndMessage statusCodeAndMessage, message string, err error) {
-	appError := NewAppError(message, strconv.Itoa(statusCodeAndMessage.StatusCode), err)
-	apiErrorResponse := NewHTTPAPIErrorResponse(statusCodeAndMessage, appError)
-	ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
+	respondWithError(ctx, statusCodeAndMessage, message, err)
 }

@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"embed"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -54,6 +53,7 @@ type DashboardTheme struct {
 	Theme string `form:"theme" json:"theme"`
 }
 type Router struct {
+	ctx               context.Context
 	app               *gin.Engine
 	cfg               *config.Config
 	Addr              string
@@ -133,6 +133,11 @@ func (s *Router) Start() error {
 		WriteTimeout:      s.WriteTimeout,
 		IdleTimeout:       s.IdleTimeout,
 		ConnState:         s.handleConnState,
+		// BaseContext provides the signal-aware context to all HTTP handlers
+		// This allows handlers to detect shutdown signals via req.Context()
+		BaseContext: func(net.Listener) context.Context {
+			return s.ctx
+		},
 	}
 
 	return ginserver.ListenAndServe()
@@ -441,10 +446,11 @@ func registerDebugEndpoints(app *gin.Engine, cfg *config.Config, metricsRegistry
 }
 
 // createAndConfigureRouter creates router and configures connection limits, timeouts, and metrics
-func createAndConfigureRouter(app *gin.Engine, cfg *config.Config,
+func createAndConfigureRouter(ctx context.Context, app *gin.Engine, cfg *config.Config,
 	registries []*registry, metricsRegistry *prometheus.Registry) *Router {
 
 	r := NewRouter(app, cfg, registries)
+	r.ctx = ctx // Set the signal-aware context
 	r.RegisterRoutes()
 
 	// Configure max connections
@@ -478,7 +484,7 @@ func createAndConfigureRouter(app *gin.Engine, cfg *config.Config,
 // ============================================================================
 
 // func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, Checker *healthcheck.Checker) *Router {
-func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
+func Defaultgin(ctx context.Context, cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
 	// Configure Gin mode based on environment
 	configureGinMode(cfg)
 
@@ -499,7 +505,7 @@ func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, Metr
 	registerDebugEndpoints(app, cfg, MetricsRegistry)
 
 	// Create and configure router with timeouts and connection limits
-	return createAndConfigureRouter(app, cfg, registries, MetricsRegistry)
+	return createAndConfigureRouter(ctx, app, cfg, registries, MetricsRegistry)
 }
 
 var isShuttingDown atomic.Value

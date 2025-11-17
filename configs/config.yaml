@@ -73,6 +73,8 @@ metrics:
     go: true
     process: true
     routes: true
+router:
+  type: fiber # Options: gin, fiber, echo, nethttp
 server:
   servicename: "bemsggateway"
   debug:
