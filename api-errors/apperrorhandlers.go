@@ -118,9 +118,9 @@ func HandleBindingError(ctx *gin.Context, err error) {
 		_, isInvalidUnmarshalError := Find[*json.InvalidUnmarshalError](err)
 
 		switch {
-		case isSyntaxError, errors.Is(err, io.ErrUnexpectedEOF), isInvalidUnmarshalError:
+		case isSyntaxError, Is(err, io.ErrUnexpectedEOF), isInvalidUnmarshalError:
 			errMsg = "Malformed JSON: Check for missing or extra braces, commas, or quotes."
-		case errors.Is(err, io.EOF):
+		case Is(err, io.EOF):
 			errMsg = "Body cannot be empty"
 		case isUnmarshalTypeError:
 			if unmarshalTypeError.Field != "" {
@@ -211,12 +211,12 @@ func HandleDBError(ctx *gin.Context, err error) {
 
 	// Handle specific PostgreSQL error types using a switch statement.
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
+	case Is(err, context.DeadlineExceeded):
 		appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 		apiErrorResponse := NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
-	case errors.Is(err, pgx.ErrNoRows):
+	case Is(err, pgx.ErrNoRows):
 		appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 		apiErrorResponse := NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 		ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
@@ -630,12 +630,12 @@ func checkDBError(err error) APIErrorResponse {
 
 	// Handle specific PostgreSQL error types using a switch statement.
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
+	case Is(err, context.DeadlineExceeded):
 		appError = NewAppError(DBConnectionException.Message, DBConnectionException.HTTPStatusCode, err)
 		apiErrorResponse = NewHTTPAPIErrorResponse(HTTPErrorServerError, appError)
 		// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
 
-	case errors.Is(err, pgx.ErrNoRows):
+	case Is(err, pgx.ErrNoRows):
 		appError = NewAppError(DBNoData.Message, DBNoData.HTTPStatusCode, err)
 		apiErrorResponse = NewHTTPAPIErrorResponse(DBErrorRecordNotFound, appError)
 		// ctx.JSON(apiErrorResponse.StatusCode, apiErrorResponse)
