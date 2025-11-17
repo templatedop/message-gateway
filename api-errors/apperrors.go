@@ -10,7 +10,7 @@ import (
 // and any field-specific errors that may have occurred.
 type AppError struct {
 	ID            string       `json:"id,omitempty"`
-	Code          string       `json:"code"`
+	Code          int          `json:"code"`
 	Message       string       `json:"message"`
 	FieldErrors   []FieldError `json:"field_errors,omitempty"`
 	Stack         *stackTrace  `json:"-"`
@@ -32,13 +32,13 @@ type FieldError struct {
 //
 // Parameters:
 //   - message: A string representing the error message.
-//   - code: A string representing the error code.
+//   - code: An integer representing the HTTP status code.
 //   - originalError: The original error that caused this error.
 //
 // Returns:
 //
 //	An instance of AppError containing the provided details and the current stack trace.
-func NewAppError(message string, code string, originalError error) AppError {
+func NewAppError(message string, code int, originalError error) AppError {
 	return AppError{
 		Stack:         collectStackTrace(),
 		Message:       message,
@@ -52,14 +52,14 @@ func NewAppError(message string, code string, originalError error) AppError {
 //
 // Parameters:
 //   - message: A string representing the error message.
-//   - code: A string representing the error code.
+//   - code: An integer representing the HTTP status code.
 //   - originalError: The original error that caused this error.
 //   - id: A string representing the unique identifier for the error.
 //
 // Returns:
 //
 //	An instance of AppError containing the provided details and the current stack trace.
-func NewAppErrorWithId(message string, code string, originalError error, id string) AppError {
+func NewAppErrorWithId(message string, code int, originalError error, id string) AppError {
 	return AppError{
 		Stack:         collectStackTrace(),
 		Message:       message,
