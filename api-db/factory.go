@@ -72,14 +72,14 @@ func (f *DefaultDbFactory) CreateConnection(dbConfig *DBConfig, osdktrace *otels
 	// Prepare the pgxpool.Config
 	pgxConfig, err := Pgxconfig(dbConfig, osdktrace)
 	if err != nil {
-		appError := apierrors.NewAppError("pgxConfig Error", "500", err)
+		appError := apierrors.NewAppError("pgxConfig Error", 500, err)
 		return nil, &appError
 	}
 
 	// Create and return the DB connection
 	conn, err := NewDB(dbConfig, pgxConfig, Registry, f.CollectorName)
 	if err != nil {
-		appError := apierrors.NewAppError("Error occurred while creating db connection", "500", err)
+		appError := apierrors.NewAppError("Error occurred while creating db connection", 500, err)
 		return nil, &appError
 	}
 

@@ -21,13 +21,13 @@ func Recover(cfg *config.Config) gin.HandlerFunc {
 				var err apierrors.AppError
 				if e, ok := r.(error); ok {
 
-					err = apierrors.NewAppError("500", "500", e)
+					err = apierrors.NewAppError("500", 500, e)
 				} else {
-					err = apierrors.NewAppError("500", "500", fmt.Errorf("%v", r))
+					err = apierrors.NewAppError("500", 500, fmt.Errorf("%v", r))
 				}
 				// Log a concise panic header
 				zl := log.GetBaseLoggerInstance().ToZerolog()
-				zl.Error().Str("code", err.Code).Msgf("Panic: %s", err.Error())
+				zl.Error().Int("code", err.Code).Msgf("Panic: %s", err.Error())
 
 				if cfg.GetString("log.level") == "debug" {
 

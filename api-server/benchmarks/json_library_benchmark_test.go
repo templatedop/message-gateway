@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	goccyjson "github.com/goccy/go-json"
 	"github.com/bytedance/sonic"
+	goccyjson "github.com/goccy/go-json"
 )
 
 // ============================================================================
@@ -21,10 +21,10 @@ import (
 // Test data structures representing typical API payloads
 
 type SmallPayload struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Active  bool   `json:"active"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Active bool   `json:"active"`
 }
 
 type MediumPayload struct {
@@ -56,7 +56,7 @@ type LargePayload struct {
 	Tags         []string            `json:"tags"`
 	Timestamp    int64               `json:"timestamp"`
 	Description  string              `json:"description"`
-	Preferences  map[string]any `json:"preferences"`
+	Preferences  map[string]any      `json:"preferences"`
 	History      []map[string]string `json:"history"`
 	RelatedUsers []SmallPayload      `json:"related_users"`
 }

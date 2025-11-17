@@ -49,17 +49,14 @@ func generatejson(v3 *openapi3.T) {
 	}
 }
 
-
 func replaceDataType(container *gabs.Container, targetType, newType string) {
-	//fmt.Println("container details: ", container)	
+	//fmt.Println("container details: ", container)
 
-// if container.Exists("schemas"){
-// 		fmt.Println("schema is: ",container.Path("schema"))
-// 	}
-		
+	// if container.Exists("schemas"){
+	// 		fmt.Println("schema is: ",container.Path("schema"))
+	// 	}
 
-
-	//get components.schemas	
+	//get components.schemas
 	// if container.Exists("components") {
 	// 	componentsSchemas := container.Path("components.schemas")
 	// 	fmt.Println("componentsSchemas:", componentsSchemas)
@@ -73,7 +70,7 @@ func replaceDataType(container *gabs.Container, targetType, newType string) {
 	// 	//replaceDataType(componentsSchemas, targetType, newType)
 	// }
 	// Traverse the JSON tree
-	children,_ := container.ChildrenMap()
+	children, _ := container.ChildrenMap()
 
 	for key, child := range children {
 		// Check if this is an object with a NullString property
@@ -101,7 +98,7 @@ func replaceDataType(container *gabs.Container, targetType, newType string) {
 }
 
 func traverseAndReplaceRefs(container, root *gabs.Container) {
-	children,_ := container.ChildrenMap()
+	children, _ := container.ChildrenMap()
 	//fmt.Println("children", children)
 
 	for key, child := range children {
@@ -142,9 +139,9 @@ func wrap200Responses(container *gabs.Container) {
 	}
 
 	// Traverse all paths
-	pathsMap,_ := paths.ChildrenMap()
+	pathsMap, _ := paths.ChildrenMap()
 	for _, pathData := range pathsMap {
-		methods,_ := pathData.ChildrenMap()
+		methods, _ := pathData.ChildrenMap()
 
 		// Traverse all methods (e.g., GET, POST, etc.)
 		for _, methodData := range methods {

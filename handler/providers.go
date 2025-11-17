@@ -34,12 +34,17 @@ func NewProviderHandler(svc *repo.ProviderRepository, c *config.Config) *Provide
 }
 
 type createMessageProviderRequest struct {
-	ProviderName      string          `json:"provider_name" validate:"required" example:"Test Provider"`
-	ShortName         string          `json:"short_name" validate:"required" example:"TP"`
-	Services          string          `json:"services" validate:"required" example:"1,2,3,4"`
-	ConfigurationKeys json.RawMessage `json:"configuration_keys" validate:"required" swaggertype:"string" example:"	[{\"keyname\":\"key1\",\"keyvalue\":\"keyvalue1\"}]"`
+	// +govalid:required
+	ProviderName      string          `json:"provider_name" example:"Test Provider"`
+	// +govalid:required
+	ShortName         string          `json:"short_name" example:"TP"`
+	// +govalid:required
+	Services          string          `json:"services" example:"1,2,3,4"`
+	// +govalid:required
+	ConfigurationKeys json.RawMessage `json:"configuration_keys" swaggertype:"string" example:"	[{\"keyname\":\"key1\",\"keyvalue\":\"keyvalue1\"}]"`
 	//ConfigurationKeys interface{} `json:"configuration_keys" validate:"required"`
-	Status bool `json:"status" validate:"required" example:"true"`
+	// +govalid:required
+	Status bool `json:"status" example:"true"`
 }
 
 // CreateMessageProvider godoc
@@ -117,7 +122,7 @@ func (ph *ProviderHandler) CreateMessageProviderHandler(ctx *gin.Context) {
 }
 
 type listMessageProviderRequest struct {
-	Status bool `form:"status" validate:"omitempty" example:"true"`
+	Status bool `form:"status" example:"true"`
 	port.MetaDataRequest
 }
 
@@ -185,7 +190,9 @@ func (ph *ProviderHandler) ListMessageProvidersHandler(ctx *gin.Context) {
 }
 
 type fetchMessageProviderRequest struct {
-	ProviderID uint64 `uri:"provider-id" validate:"required,numeric" example:"3"`
+	// +govalid:required
+	// +govalid:gt=0
+	ProviderID uint64 `uri:"provider-id" example:"3"`
 }
 
 // FetchMessageProvider godoc
@@ -250,11 +257,17 @@ func (ph *ProviderHandler) FetchMessageProviderHandler(ctx *gin.Context) {
 }
 
 type updateMessageProviderRequest struct {
-	ProviderID        uint64          `uri:"provider-id"  validate:"required,numeric" example:"3" json:"-"`
-	ProviderName      string          `json:"provider_name" validate:"required" example:"Test Provider"`
-	Services          string          `json:"services" validate:"required,services" example:"1,2,3,4"`
+	// +govalid:required
+	// +govalid:gt=0
+	ProviderID        uint64          `uri:"provider-id" example:"3" json:"-"`
+	// +govalid:required
+	ProviderName      string          `json:"provider_name" example:"Test Provider"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	Services          string          `json:"services" example:"1,2,3,4"`
 	ConfigurationKeys json.RawMessage `json:"configuration_keys"`
-	Status            bool            `json:"status" validate:"required" example:"true"`
+	// +govalid:required
+	Status            bool            `json:"status" example:"true"`
 }
 
 // UpdateMessageProvider godoc
@@ -332,7 +345,9 @@ func (ph *ProviderHandler) UpdateMessageProviderHandler(ctx *gin.Context) {
 }
 
 type toggleMessageProviderStatusRequest struct {
-	ProviderID uint64 `uri:"provider-id" validate:"required,numeric" example:"3"`
+	// +govalid:required
+	// +govalid:gt=0
+	ProviderID uint64 `uri:"provider-id" example:"3"`
 }
 
 // ToggleMessageProviderStatus godoc

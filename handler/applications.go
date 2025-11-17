@@ -68,34 +68,50 @@ func (c *ApplicationHandler) Middlewares() []gin.HandlerFunc {
 
 // create MgApplication  Request represents a request body for creating a MgApplication Handler
 type createMessageApplicationRequest struct {
-	ApplicationID   uint64 `json:"application_id"`
-	ApplicationName string `json:"application_name" validate:"required" example:"Test Application"`
-	RequestType     string `json:"request_type" validate:"required,request_type" example:"1"`
-	Status          bool   `json:"status" validate:"required" example:"true"`
+	ApplicationID uint64 `json:"application_id"`
+	// +govalid:required
+	ApplicationName string `json:"application_name" example:"Test Application"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	RequestType string `json:"request_type" example:"1"`
+	// +govalid:required
+	Status bool `json:"status" example:"true"`
 }
 
 type createMessageApplicationXMLRequest struct {
-	XMLName         xml.Name `xml:"CreateMessageApplicationRequest"`
-	ApplicationID   uint64   `xml:"application_id"`
-	ApplicationName string   `xml:"application_name" validate:"required" example:"Test Application"`
-	RequestType     string   `xml:"request_type" validate:"required,request_type" example:"1"`
-	Status          bool     `xml:"status" validate:"required" example:"true"`
+	XMLName       xml.Name `xml:"CreateMessageApplicationRequest"`
+	ApplicationID uint64   `xml:"application_id"`
+	// +govalid:required
+	ApplicationName string `xml:"application_name" example:"Test Application"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	RequestType string `xml:"request_type" example:"1"`
+	// +govalid:required
+	Status bool `xml:"status" example:"true"`
 }
 
 type createMessageApplicationRequestForm struct {
-	ApplicationID   uint64 `form:"application_id"`
-	ApplicationName string `form:"application_name" validate:"required" example:"Test Application"`
-	RequestType     string `form:"request_type" validate:"required,request_type" example:"1"`
-	Status          bool   `form:"status" validate:"required" example:"true"`
+	ApplicationID uint64 `form:"application_id"`
+	// +govalid:required
+	ApplicationName string `form:"application_name" example:"Test Application"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	RequestType string `form:"request_type" example:"1"`
+	// +govalid:required
+	Status bool `form:"status" example:"true"`
 	// Single logo file upload (form field name: logo)
 	Logo *multipart.FileHeader `form:"logo"`
 	// Multiple attachments (repeat field name attachments or use attachments[] depending on client)
 	Attachments []*multipart.FileHeader `form:"attachments"`
 }
 type createMessageApplicationRequestFormTest struct {
-	ApplicationName string `form:"application_name" validate:"required" example:"Test Application"`
-	RequestType     string `form:"request_type" validate:"required,request_type" example:"1"`
-	Status          bool   `form:"status" validate:"required" example:"true"`
+	// +govalid:required
+	ApplicationName string `form:"application_name" example:"Test Application"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	RequestType string `form:"request_type" example:"1"`
+	// +govalid:required
+	Status bool `form:"status" example:"true"`
 }
 
 func (ah *ApplicationHandler) CreateMessageApplicationXMLHandler(sctx *serverRoute.Context, req createMessageApplicationXMLRequest) (*response.CreateMsgApplicationAPIResponse, error) {
@@ -245,10 +261,16 @@ func (ah *ApplicationHandler) CreateMessageApplicationHandler(sctx *serverRoute.
 }
 
 type updateMessageApplicationRequest struct {
-	ApplicationID   uint64 `uri:"application-id" validate:"required,numeric" example:"4" json:"-"`
-	ApplicationName string `json:"application_name" validate:"required" example:"Test Application"`
-	RequestType     string `json:"request_type" validate:"required,request_type" example:"1"`
-	Status          bool   `json:"status" validate:"required" example:"true"`
+	// +govalid:required
+	// +govalid:gt=0
+	ApplicationID uint64 `uri:"application-id" example:"4" json:"-"`
+	// +govalid:required
+	ApplicationName string `json:"application_name" example:"Test Application"`
+	// +govalid:required
+	// +govalid:cel=value.matches('^[1-4](,[1-4])*$')
+	RequestType string `json:"request_type" example:"1"`
+	// +govalid:required
+	Status bool `json:"status" example:"true"`
 }
 
 // UpdateMessageApplication godoc
@@ -329,7 +351,7 @@ func (ah *ApplicationHandler) UpdateMessageApplicationHandler(sctx *serverRoute.
 }
 
 type listMessageApplicationsRequest struct {
-	Status bool `form:"status"  example:"true" validate:"omitempty"`
+	Status bool `form:"status" example:"true"`
 	port.MetaDataRequest
 }
 
@@ -468,7 +490,9 @@ func getFieldValue(item any, field string) any {
 }
 
 type fetchApplicationRequest struct {
-	ApplicationID uint64 `uri:"application-id" validate:"required,numeric"  example:"4"`
+	// +govalid:required
+	// +govalid:gt=0
+	ApplicationID uint64 `uri:"application-id" example:"4"`
 }
 
 // FetchApplicationHandler godoc
@@ -534,7 +558,9 @@ func (ah *ApplicationHandler) FetchApplicationHandler(sctx *serverRoute.Context,
 }
 
 type toggleApplicationStatusRequest struct {
-	ApplicationID uint64 `uri:"application-id" validate:"required,numeric" example:"4"`
+	// +govalid:required
+	// +govalid:gt=0
+	ApplicationID uint64 `uri:"application-id" example:"4"`
 }
 
 // ToggleApplicationStatus godoc

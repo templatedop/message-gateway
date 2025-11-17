@@ -19,7 +19,7 @@ func RateLimiter(bucket *ratelimiter.LeakyBucket) routeradapter.MiddlewareFunc {
 
 		// Rate limit exceeded, return 429
 		return ctx.JSON(http.StatusTooManyRequests, map[string]string{
-			"error": "rate limit exceeded",
+			"error":   "rate limit exceeded",
 			"message": "too many requests, please try again later",
 		})
 	}

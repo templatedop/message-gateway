@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"MgApplication/api-server/router-adapter"
 	log "MgApplication/api-log"
+	"MgApplication/api-server/router-adapter"
 )
 
 // Timeout returns a middleware that sets a timeout for request processing

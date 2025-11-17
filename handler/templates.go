@@ -33,15 +33,25 @@ func NewTemplateHandler(svc *repo.TemplateRepository, c *config.Config) *Templat
 
 type createTemplateRequest struct {
 	TemplateLocalID uint64 `json:"template_local_id"`
-	ApplicationID   string `json:"application_id" validate:"required,numeric" example:"4"`
-	TemplateName    string `json:"template_name" validate:"required" example:"Test Template"`
-	TemplateFormat  string `json:"template_format" validate:"required" example:"Dear {#var#}, Greetings from India Post on the occasion of {#var#} - Indiapost"`
-	SenderID        string `json:"sender_id" validate:"required" example:"INPOST"`
+	// +govalid:required
+	// +govalid:gt=0
+	ApplicationID   string `json:"application_id" example:"4"`
+	// +govalid:required
+	TemplateName    string `json:"template_name" example:"Test Template"`
+	// +govalid:required
+	TemplateFormat  string `json:"template_format" example:"Dear {#var#}, Greetings from India Post on the occasion of {#var#} - Indiapost"`
+	// +govalid:required
+	SenderID        string `json:"sender_id" example:"INPOST"`
 	EntityID        string `json:"entity_id" example:"1001051725995192803"`
-	TemplateID      string `json:"template_id" validate:"required,numeric" example:"1007188452935484904"`
-	Gateway         string `json:"gateway" validate:"required" example:"1"`
-	Status          bool   `json:"status" validate:"required" example:"true"`
-	MessageType     string `json:"message_type" validate:"required" example:"PM"`
+	// +govalid:required
+	// +govalid:gt=0
+	TemplateID      string `json:"template_id" example:"1007188452935484904"`
+	// +govalid:required
+	Gateway         string `json:"gateway" example:"1"`
+	// +govalid:required
+	Status          bool   `json:"status" example:"true"`
+	// +govalid:required
+	MessageType     string `json:"message_type" example:"PM"`
 }
 
 // CreateTemplateHandler godoc
@@ -189,7 +199,9 @@ func (ch *TemplateHandler) ListTemplatesHandler(ctx *gin.Context) {
 }
 
 type toggleTemplateStatusRequest struct {
-	TemplateLocalID uint64 `uri:"template-local-id" validate:"required,numeric" example:"355"`
+	// +govalid:required
+	// +govalid:gt=0
+	TemplateLocalID uint64 `uri:"template-local-id" example:"355"`
 }
 
 // ToggleTemplateStatus godoc
@@ -250,7 +262,8 @@ func (ch *TemplateHandler) ToggleTemplateStatusHandler(ctx *gin.Context) {
 }
 
 type fetchTemplateRequest struct {
-	TemplateLocalID uint64 `uri:"template-local-id" validate:"required" example:"355"`
+	// +govalid:required
+	TemplateLocalID uint64 `uri:"template-local-id" example:"355"`
 }
 
 // FetchTemplate godoc
@@ -312,16 +325,25 @@ func (ch *TemplateHandler) FetchTemplateHandler(ctx *gin.Context) {
 }
 
 type updateTemplateRequest struct {
-	TemplateLocalID uint64 `uri:"template-local-id" validate:"required" example:"355" json:"-"`
-	ApplicationID   string `json:"application_id" validate:"required" example:"4"`
-	TemplateName    string `json:"template_name" validate:"required" example:"Std. Instruction CANCELLATION"`
-	TemplateFormat  string `json:"template_format" validate:"required" example:"Standing Instruction {#var#} on Account No {#var#} was cancelled."`
-	SenderID        string `json:"sender_id" validate:"required" example:"INPOST"`
+	// +govalid:required
+	TemplateLocalID uint64 `uri:"template-local-id" example:"355" json:"-"`
+	// +govalid:required
+	ApplicationID   string `json:"application_id" example:"4"`
+	// +govalid:required
+	TemplateName    string `json:"template_name" example:"Std. Instruction CANCELLATION"`
+	// +govalid:required
+	TemplateFormat  string `json:"template_format" example:"Standing Instruction {#var#} on Account No {#var#} was cancelled."`
+	// +govalid:required
+	SenderID        string `json:"sender_id" example:"INPOST"`
 	EntityID        string `json:"entity_id"`
-	TemplateID      string `json:"template_id" validate:"required" example:"1007002656392643880"`
-	Gateway         string `json:"gateway" validate:"required" example:"1"`
-	MessageType     string `json:"message_type" validate:"required" example:"PM"`
-	Status          bool   `json:"status" validate:"required" example:"true"`
+	// +govalid:required
+	TemplateID      string `json:"template_id" example:"1007002656392643880"`
+	// +govalid:required
+	Gateway         string `json:"gateway" example:"1"`
+	// +govalid:required
+	MessageType     string `json:"message_type" example:"PM"`
+	// +govalid:required
+	Status          bool   `json:"status" example:"true"`
 }
 
 // UpdateTemplate godoc
@@ -404,7 +426,9 @@ func (ch *TemplateHandler) UpdateTemplateHandler(ctx *gin.Context) {
 }
 
 type fetchTemplateByApplicationRequest struct {
-	ApplicationID string `form:"application-id" validate:"required,numeric" example:"4"`
+	// +govalid:required
+	// +govalid:gt=0
+	ApplicationID string `form:"application-id" example:"4"`
 }
 
 // FetchTemplateByApplication godoc

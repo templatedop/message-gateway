@@ -38,7 +38,7 @@ func CallAuthorizationAPI(ctx context.Context, payload Payload) (*resty.Response
 	defer cancel()
 
 	if restyClient == nil {
-		appError := apierrors.NewAppError("Resty Client initialization error", "500", nil)
+		appError := apierrors.NewAppError("Resty Client initialization error", 500, nil)
 		return nil, &appError
 	}
 	request := restyClient.R().

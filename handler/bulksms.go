@@ -21,17 +21,21 @@ import (
 )
 
 type initiateBulkSMSRequest struct {
-	File          uint64 `json:"file_id"`
-	ReferenceID   string `json:"reference_id"`
-	ApplicationID string `json:"application_id" validate:"required" example:"4"`
-	TemplateName  string `json:"template_name" validate:"required" example:"355"`
-	TemplateID    string `json:"template_id"`
-	EntityID      string `json:"entity_id"`
-	SenderID      string `json:"sender_id"`
-	MobileNo      string `json:"mobile_no" validate:"required" example:"9000000000"`
-	TestMessage   string `json:"test_msg" validate:"required" example:"Your Transaction is Successful. Your Order No is 906627, booked on : 180261"`
-	MessageType   string `json:"messsage_type"`
-	IsVerified    int    `json:"isverified"`
+	File        uint64 `json:"file_id"`
+	ReferenceID string `json:"reference_id"`
+	// +govalid:required
+	ApplicationID string `json:"application_id" example:"4"`
+	// +govalid:required
+	TemplateName string `json:"template_name" example:"355"`
+	TemplateID   string `json:"template_id"`
+	EntityID     string `json:"entity_id"`
+	SenderID     string `json:"sender_id"`
+	// +govalid:required
+	MobileNo string `json:"mobile_no" example:"9000000000"`
+	// +govalid:required
+	TestMessage string `json:"test_msg" example:"Your Transaction is Successful. Your Order No is 906627, booked on : 180261"`
+	MessageType string `json:"messsage_type"`
+	IsVerified  int    `json:"isverified"`
 }
 
 // InitiateBulkSMS godoc
@@ -144,8 +148,10 @@ func (ch *MgApplicationHandler) InitiateBulkSMSHandler(ctx *gin.Context) {
 }
 
 type validateTestSMSRequest struct {
-	ReferenceID string `form:"reference-id" validate:"required" example:"lnv579ejt2vmaq03i7up"`
-	TestString  string `form:"test-string" validate:"required" example:"906627"`
+	// +govalid:required
+	ReferenceID string `form:"reference-id" example:"lnv579ejt2vmaq03i7up"`
+	// +govalid:required
+	TestString string `form:"test-string" example:"906627"`
 }
 
 // ValidateTestSMS godoc
@@ -262,19 +268,29 @@ type NICResponse struct {
 }
 
 type SendBulkSMSRequestOld struct {
-	UniqueID    string `json:"unique_id" validate:"required"` // Unique ID to retrieve the file path
-	SenderID    string `json:"sender_id" validate:"required" `
-	TemplateID  string `json:"template_id" validate:"required" `
-	MessageType string `json:"message_type" validate:"required" `
+	// +govalid:required
+	UniqueID string `json:"unique_id"` // Unique ID to retrieve the file path
+	// +govalid:required
+	SenderID string `json:"sender_id"`
+	// +govalid:required
+	TemplateID string `json:"template_id"`
+	// +govalid:required
+	MessageType string `json:"message_type"`
 }
 
 type sendBulkSMSRequest struct {
-	SenderID     string `json:"sender_id" validate:"required"`
-	MobileNumber string `json:"mobile_number" validate:"required"`
-	MessageType  string `json:"message_type" validate:"required"`
-	MessageText  string `json:"message_text" validate:"required"`
-	TemplateID   string `json:"template_id" validate:"required"`
-	EntityID     string `json:"entity_id" validate:"required"`
+	// +govalid:required
+	SenderID string `json:"sender_id"`
+	// +govalid:required
+	MobileNumber string `json:"mobile_number"`
+	// +govalid:required
+	MessageType string `json:"message_type"`
+	// +govalid:required
+	MessageText string `json:"message_text"`
+	// +govalid:required
+	TemplateID string `json:"template_id"`
+	// +govalid:required
+	EntityID string `json:"entity_id"`
 }
 
 /*

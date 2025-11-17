@@ -22,16 +22,16 @@ func init() {
 // NetHTTPAdapter implements RouterAdapter interface for standard library net/http
 // This adapter implements its own routing with path parameter support
 type NetHTTPAdapter struct {
-	mux              *http.ServeMux
-	router           *Router
-	server           *http.Server
-	config           *routeradapter.RouterConfig
-	errorHandler     routeradapter.ErrorHandler
-	noRouteHandler   routeradapter.HandlerFunc
-	noMethodHandler  routeradapter.HandlerFunc
-	middlewares      []routeradapter.MiddlewareFunc
-	ctx              context.Context // Signal-aware application context
-	mu               sync.RWMutex
+	mux             *http.ServeMux
+	router          *Router
+	server          *http.Server
+	config          *routeradapter.RouterConfig
+	errorHandler    routeradapter.ErrorHandler
+	noRouteHandler  routeradapter.HandlerFunc
+	noMethodHandler routeradapter.HandlerFunc
+	middlewares     []routeradapter.MiddlewareFunc
+	ctx             context.Context // Signal-aware application context
+	mu              sync.RWMutex
 }
 
 // NewNetHTTPAdapter creates a new net/http router adapter

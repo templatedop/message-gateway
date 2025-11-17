@@ -90,7 +90,7 @@ func Init(config ClientConfig) error {
 	})
 
 	if restyClient == nil {
-		appError := apierrors.NewAppError("Resty client Uninitialized", "500", nil)
+		appError := apierrors.NewAppError("Resty client Uninitialized", 500, nil)
 		l.Error(nil, &appError)
 		return &appError
 	}
@@ -122,14 +122,14 @@ func Authorize(ctx *gin.Context) (*AuthResult, error) {
 	// Making the actual HTTP request using the internal Resty client.
 	resp, err := CallAuthorizationAPI(ctx, payload)
 	if err != nil {
-		appError := apierrors.NewAppError(err.Error(), "500", err)
+		appError := apierrors.NewAppError(err.Error(), 500, err)
 		l.Error(nil, appError.Pretty)
 		return nil, &appError
 	}
 
 	var responseParsed AuthAPIResponse
 	if err := json.Unmarshal(resp.Body(), &responseParsed); err != nil {
-		appError := apierrors.NewAppError(err.Error(), "500", err)
+		appError := apierrors.NewAppError(err.Error(), 500, err)
 		l.Error(nil, appError.Pretty)
 		return nil, &appError
 	}

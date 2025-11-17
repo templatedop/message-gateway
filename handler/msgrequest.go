@@ -83,14 +83,21 @@ func UnicodemsgConvertNIC(message string) string {
 
 type createSMSRequest struct {
 	RequestID     uint64 `json:"reqid"`
-	ApplicationID string `json:"application_id" validate:"required" example:"4"`
-	FacilityID    string `json:"facility_id" validate:"required" example:"facility1"`
-	Priority      int    `json:"priority" validate:"required" example:"1"`
-	MessageText   string `json:"message_text" validate:"required" example:"Your OTP is : 1342789 for Account_Creation. Please keep it for further references"`
-	SenderID      string `json:"sender_id" validate:"required" example:"INPOST"`
-	MobileNumbers string `json:"mobile_numbers" validate:"required" example:"9000000000"`
+	// +govalid:required
+	ApplicationID string `json:"application_id" example:"4"`
+	// +govalid:required
+	FacilityID    string `json:"facility_id" example:"facility1"`
+	// +govalid:required
+	Priority      int    `json:"priority" example:"1"`
+	// +govalid:required
+	MessageText   string `json:"message_text" example:"Your OTP is : 1342789 for Account_Creation. Please keep it for further references"`
+	// +govalid:required
+	SenderID      string `json:"sender_id" example:"INPOST"`
+	// +govalid:required
+	MobileNumbers string `json:"mobile_numbers" example:"9000000000"`
 	EntityId      string `json:"entity_id" example:"1301157641566214705"`
-	TemplateID    string `json:"template_id" validate:"required" example:"1307160377410448739"`
+	// +govalid:required
+	TemplateID    string `json:"template_id" example:"1307160377410448739"`
 	MessageType   string `json:"message_type" example:"PM"`
 }
 
@@ -1181,7 +1188,9 @@ func (ce CustomError) Error() string {
 type FetchCDACSMSDeliveryStatusRequest struct {
 	// UserName string `json:"username" validate:"required" example:"appostsms"`
 	// Password string `json:"password" validate:"required" example:"88c151b622140ae329d772317136cd74931611c7"`
-	ReferenceID string `form:"reference_id" validate:"required,numeric" example:"250220251740480271265"`
+	// +govalid:required
+	// +govalid:gt=0
+	ReferenceID string `form:"reference_id" example:"250220251740480271265"`
 	// IsPwdEncrypted bool `json:"pwd_encrypted" validate:"required" example:"true"`
 
 }

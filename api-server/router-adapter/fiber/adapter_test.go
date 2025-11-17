@@ -50,8 +50,8 @@ func TestNewFiberAdapter(t *testing.T) {
 
 func TestFiberAdapter_RegisterRoute(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
-		Type: routeradapter.RouterTypeFiber,
-		Port: 8080,
+		Type:  routeradapter.RouterTypeFiber,
+		Port:  8080,
 		Fiber: &routeradapter.FiberConfig{},
 	}
 
@@ -77,8 +77,8 @@ func TestFiberAdapter_RegisterRoute(t *testing.T) {
 
 func TestFiberAdapter_RegisterGroup(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
-		Type: routeradapter.RouterTypeFiber,
-		Port: 8080,
+		Type:  routeradapter.RouterTypeFiber,
+		Port:  8080,
 		Fiber: &routeradapter.FiberConfig{},
 	}
 
@@ -106,8 +106,8 @@ func TestFiberAdapter_RegisterGroup(t *testing.T) {
 
 func TestFiberAdapter_Middleware(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
-		Type: routeradapter.RouterTypeFiber,
-		Port: 8080,
+		Type:  routeradapter.RouterTypeFiber,
+		Port:  8080,
 		Fiber: &routeradapter.FiberConfig{},
 	}
 
@@ -151,8 +151,8 @@ func TestFiberAdapter_Middleware(t *testing.T) {
 
 func TestFiberAdapter_NativeMiddleware(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
-		Type: routeradapter.RouterTypeFiber,
-		Port: 8080,
+		Type:  routeradapter.RouterTypeFiber,
+		Port:  8080,
 		Fiber: &routeradapter.FiberConfig{},
 	}
 
@@ -254,8 +254,8 @@ func TestFiberAdapter_StartShutdown(t *testing.T) {
 
 func TestFiberAdapter_ErrorHandling(t *testing.T) {
 	cfg := &routeradapter.RouterConfig{
-		Type: routeradapter.RouterTypeFiber,
-		Port: 8080,
+		Type:  routeradapter.RouterTypeFiber,
+		Port:  8080,
 		Fiber: &routeradapter.FiberConfig{},
 	}
 
@@ -288,7 +288,7 @@ func TestFiberAdapter_Configuration(t *testing.T) {
 		config *routeradapter.FiberConfig
 	}{
 		{
-			name: "default config",
+			name:   "default config",
 			config: &routeradapter.FiberConfig{},
 		},
 		{

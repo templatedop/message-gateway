@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"MgApplication/api-server/router-adapter"
 	log "MgApplication/api-log"
+	"MgApplication/api-server/router-adapter"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

@@ -69,8 +69,12 @@ func (ch *ReportsHandler) SMSDashboardHandler(ctx *gin.Context) {
 }
 
 type sentSMSStatusReportRequest struct {
-	FromDate string `form:"from-date" validate:"required,date_dd_mm_yyyy" example:"01-01-2008"`
-	ToDate   string `form:"to-date" validate:"required,date_dd_mm_yyyy" example:"18-06-2024"`
+	// +govalid:required
+	// +govalid:date=format:dd-mm-yyyy
+	FromDate string `form:"from-date" example:"01-01-2008"`
+	// +govalid:required
+	// +govalid:date=format:dd-mm-yyyy
+	ToDate   string `form:"to-date" example:"18-06-2024"`
 	port.MetaDataRequest
 }
 
@@ -144,9 +148,14 @@ func (ch *ReportsHandler) SentSMSStatusReportHandler(ctx *gin.Context) {
 }
 
 type aggregateSMSUsageReportRequest struct {
-	FromDate   string `form:"from-date" validate:"required,date_dd_mm_yyyy" example:"01-01-2008"`
-	ToDate     string `form:"to-date" validate:"required,date_dd_mm_yyyy" example:"18-06-2024"`
-	ReportType int8   `form:"report-type" validate:"required" example:"1"`
+	// +govalid:required
+	// +govalid:date=format:dd-mm-yyyy
+	FromDate   string `form:"from-date" example:"01-01-2008"`
+	// +govalid:required
+	// +govalid:date=format:dd-mm-yyyy
+	ToDate     string `form:"to-date" example:"18-06-2024"`
+	// +govalid:required
+	ReportType int8   `form:"report-type" example:"1"`
 	port.MetaDataRequest
 }
 

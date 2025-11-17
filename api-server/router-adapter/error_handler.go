@@ -37,8 +37,8 @@ func (h *DefaultErrorHandler) HandleError(ctx *RouterContext, err error) {
 		if apiErr.Message != "" {
 			message = apiErr.Message
 		}
-		if apiErr.Code != "" {
-			errorCode = apiErr.Code
+		if apiErr.Code != 0 {
+			statusCode = apiErr.Code
 		}
 	}
 

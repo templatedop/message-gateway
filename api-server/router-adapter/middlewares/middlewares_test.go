@@ -155,12 +155,12 @@ func TestRecovery(t *testing.T) {
 // TestCORS tests CORS middleware
 func TestCORS(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         CORSConfig
-		origin         string
-		method         string
-		expectAllowed  bool
-		expectHeaders  map[string]string
+		name          string
+		config        CORSConfig
+		origin        string
+		method        string
+		expectAllowed bool
+		expectHeaders map[string]string
 	}{
 		{
 			name: "allowed origin",
@@ -310,9 +310,9 @@ func TestTracing(t *testing.T) {
 
 	// Create tracing config
 	config := TracingConfig{
-		TracerProvider:     tp,
-		TextMapPropagator:  propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
-		ServiceName:        "test-service",
+		TracerProvider:    tp,
+		TextMapPropagator: propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
+		ServiceName:       "test-service",
 	}
 
 	// Create middleware

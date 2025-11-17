@@ -24,8 +24,8 @@ var (
 	message                  = "validation error"
 	validatorErrorMessage    = "validator not initialized"
 	translatorErrorMessage   = "translator not initialized"
-	unprocessibleEntityCode  = "422"
-	serverErrorCode          = "500"
+	unprocessibleEntityCode  = 422
+	serverErrorCode          = 500
 )
 
 var structFieldTags = []string{"json", "param", "form"}

@@ -30,29 +30,29 @@ type SmallRequest struct {
 }
 
 type MediumRequest struct {
-	ID        string            `json:"id" binding:"required"`
-	Name      string            `json:"name" binding:"required"`
-	Email     string            `json:"email" binding:"required,email"`
-	Age       int               `json:"age" binding:"required,gte=0,lte=150"`
-	Country   string            `json:"country"`
-	City      string            `json:"city"`
-	Address   string            `json:"address"`
-	Phone     string            `json:"phone"`
-	Metadata  map[string]string `json:"metadata"`
-	Tags      []string          `json:"tags"`
+	ID       string            `json:"id" binding:"required"`
+	Name     string            `json:"name" binding:"required"`
+	Email    string            `json:"email" binding:"required,email"`
+	Age      int               `json:"age" binding:"required,gte=0,lte=150"`
+	Country  string            `json:"country"`
+	City     string            `json:"city"`
+	Address  string            `json:"address"`
+	Phone    string            `json:"phone"`
+	Metadata map[string]string `json:"metadata"`
+	Tags     []string          `json:"tags"`
 }
 
 type LargeRequest struct {
-	ID           string                 `json:"id" binding:"required"`
-	Name         string                 `json:"name" binding:"required"`
-	Email        string                 `json:"email" binding:"required,email"`
-	Description  string                 `json:"description"`
-	Metadata     map[string]interface{} `json:"metadata"`
-	Tags         []string               `json:"tags"`
-	Nested       NestedData             `json:"nested"`
-	Items        []Item                 `json:"items"`
-	Attributes   map[string]string      `json:"attributes"`
-	Timestamp    int64                  `json:"timestamp"`
+	ID          string                 `json:"id" binding:"required"`
+	Name        string                 `json:"name" binding:"required"`
+	Email       string                 `json:"email" binding:"required,email"`
+	Description string                 `json:"description"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Tags        []string               `json:"tags"`
+	Nested      NestedData             `json:"nested"`
+	Items       []Item                 `json:"items"`
+	Attributes  map[string]string      `json:"attributes"`
+	Timestamp   int64                  `json:"timestamp"`
 }
 
 type NestedData struct {
@@ -183,9 +183,9 @@ func BenchmarkAPIServer_Before_MediumRequestBinding(b *testing.B) {
 		Address: "123 Main St",
 		Phone:   "+1-555-0100",
 		Metadata: map[string]string{
-			"source":   "api",
-			"version":  "v1",
-			"client":   "web",
+			"source":  "api",
+			"version": "v1",
+			"client":  "web",
 		},
 		Tags: []string{"urgent", "customer", "verified"},
 	}
@@ -215,9 +215,9 @@ func BenchmarkAPIServer_After_MediumRequestBinding(b *testing.B) {
 		Address: "123 Main St",
 		Phone:   "+1-555-0100",
 		Metadata: map[string]string{
-			"source":   "api",
-			"version":  "v1",
-			"client":   "web",
+			"source":  "api",
+			"version": "v1",
+			"client":  "web",
 		},
 		Tags: []string{"urgent", "customer", "verified"},
 	}

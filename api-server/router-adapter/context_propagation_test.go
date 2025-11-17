@@ -21,10 +21,10 @@ import (
 type contextKey string
 
 const (
-	traceIDKey     contextKey = "trace-id"
-	requestIDKey   contextKey = "request-id"
-	userIDKey      contextKey = "user-id"
-	middlewareKey  contextKey = "middleware-called"
+	traceIDKey    contextKey = "trace-id"
+	requestIDKey  contextKey = "request-id"
+	userIDKey     contextKey = "user-id"
+	middlewareKey contextKey = "middleware-called"
 )
 
 // TestContextPropagation tests that context is properly propagated through middleware chain

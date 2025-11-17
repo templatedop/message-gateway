@@ -314,11 +314,11 @@ func TestNetHTTPAdapter_Router(t *testing.T) {
 
 func TestPathToRegex(t *testing.T) {
 	tests := []struct {
-		name     string
-		path     string
-		testPath string
+		name        string
+		path        string
+		testPath    string
 		shouldMatch bool
-		params   map[string]string
+		params      map[string]string
 	}{
 		{
 			name:        "simple path",

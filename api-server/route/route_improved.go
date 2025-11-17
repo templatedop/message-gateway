@@ -101,7 +101,14 @@ func buildImproved[Req, Res any](f HandlerFunc[Req, Res], defaultStatus ...int) 
 			}
 
 			// Validate the bound request
-			if err := validation.ValidateStruct(req); err != nil {
+			// Check if request implements govalid.Validator interface
+			if validator, ok := any(&req).(interface{ Validate() error }); ok {
+				if err := validator.Validate(); err != nil {
+					apierrors.HandleValidationError(c, err)
+					return
+				}
+			} else if err := validation.ValidateStruct(req); err != nil {
+				// Fallback to old validation for backward compatibility
 				apierrors.HandleValidationError(c, err)
 				return
 			}

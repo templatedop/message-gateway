@@ -99,9 +99,9 @@ func TestGzipCompressionLevels(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 
 	levels := []int{
-		gzip.BestSpeed,      // 1
+		gzip.BestSpeed,          // 1
 		gzip.DefaultCompression, // -1 (6)
-		gzip.BestCompression, // 9
+		gzip.BestCompression,    // 9
 	}
 
 	for _, level := range levels {
