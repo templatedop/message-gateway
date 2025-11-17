@@ -306,6 +306,195 @@ func TestLogger_Msg_WithError(t *testing.T) {
 	}
 }
 
+// Tests for Event-based API
+
+func TestDebugEvent(t *testing.T) {
+	buf := setupTestLogger()
+
+	DebugEvent(nil).Str("key", "value").Int("count", 42).Msg("debug event test")
+
+	output := buf.String()
+	if !contains(output, "debug event test") {
+		t.Error("Debug event message should be logged")
+	}
+	if !contains(output, "key") || !contains(output, "value") {
+		t.Error("Debug event should include structured fields")
+	}
+	if !contains(output, "42") {
+		t.Error("Debug event should include integer field")
+	}
+}
+
+func TestInfoEvent(t *testing.T) {
+	buf := setupTestLogger()
+
+	InfoEvent(nil).Str("operation", "login").Str("user", "john").Msg("user logged in")
+
+	output := buf.String()
+	if !contains(output, "user logged in") {
+		t.Error("Info event message should be logged")
+	}
+	if !contains(output, "operation") || !contains(output, "login") {
+		t.Error("Info event should include operation field")
+	}
+	if !contains(output, "john") {
+		t.Error("Info event should include user field")
+	}
+}
+
+func TestWarnEvent(t *testing.T) {
+	buf := setupTestLogger()
+
+	WarnEvent(nil).Str("reason", "rate_limit").Int("attempts", 5).Msg("approaching rate limit")
+
+	output := buf.String()
+	if !contains(output, "approaching rate limit") {
+		t.Error("Warn event message should be logged")
+	}
+	if !contains(output, "rate_limit") {
+		t.Error("Warn event should include reason field")
+	}
+	if !contains(output, "5") {
+		t.Error("Warn event should include attempts field")
+	}
+}
+
+func TestErrorEvent(t *testing.T) {
+	buf := setupTestLogger()
+
+	testErr := &testError{msg: "connection timeout"}
+	ErrorEvent(nil).Err(testErr).Str("host", "db.example.com").Msg("database connection failed")
+
+	output := buf.String()
+	if !contains(output, "database connection failed") {
+		t.Error("Error event message should be logged")
+	}
+	if !contains(output, "connection timeout") {
+		t.Error("Error event should include error")
+	}
+	if !contains(output, "db.example.com") {
+		t.Error("Error event should include host field")
+	}
+}
+
+func TestCriticalEvent(t *testing.T) {
+	buf := setupTestLogger()
+
+	CriticalEvent(nil).Str("service", "payment").Bool("available", false).Msg("service unavailable")
+
+	output := buf.String()
+	if !contains(output, "service unavailable") {
+		t.Error("Critical event message should be logged")
+	}
+	if !contains(output, "payment") {
+		t.Error("Critical event should include service field")
+	}
+	if !contains(output, "false") {
+		t.Error("Critical event should include available field")
+	}
+}
+
+func TestDebugEvent_WithContext(t *testing.T) {
+	buf := setupTestLogger()
+	ctx := context.Background()
+
+	DebugEvent(ctx).Str("context_key", "context_value").Msg("debug with context")
+
+	output := buf.String()
+	if !contains(output, "debug with context") {
+		t.Error("Debug event with context should be logged")
+	}
+	if !contains(output, "context_value") {
+		t.Error("Debug event should include fields when using context")
+	}
+}
+
+func TestInfoEvent_WithContext(t *testing.T) {
+	buf := setupTestLogger()
+	ctx := context.Background()
+
+	InfoEvent(ctx).Int("status", 200).Msg("request processed")
+
+	output := buf.String()
+	if !contains(output, "request processed") {
+		t.Error("Info event with context should be logged")
+	}
+	if !contains(output, "200") {
+		t.Error("Info event should include status field")
+	}
+}
+
+func TestErrorEvent_WithContext(t *testing.T) {
+	buf := setupTestLogger()
+	ctx := context.Background()
+
+	testErr := &testError{msg: "validation failed"}
+	ErrorEvent(ctx).Err(testErr).Str("field", "email").Msg("input validation error")
+
+	output := buf.String()
+	if !contains(output, "input validation error") {
+		t.Error("Error event with context should be logged")
+	}
+	if !contains(output, "validation failed") {
+		t.Error("Error event should include error details")
+	}
+	if !contains(output, "email") {
+		t.Error("Error event should include field information")
+	}
+}
+
+func TestEventAPI_MultipleFields(t *testing.T) {
+	buf := setupTestLogger()
+
+	InfoEvent(nil).
+		Str("user_id", "user123").
+		Str("action", "purchase").
+		Float64("amount", 99.99).
+		Int("quantity", 3).
+		Bool("success", true).
+		Msg("transaction completed")
+
+	output := buf.String()
+	if !contains(output, "transaction completed") {
+		t.Error("Message should be logged")
+	}
+	if !contains(output, "user123") {
+		t.Error("Should include user_id field")
+	}
+	if !contains(output, "purchase") {
+		t.Error("Should include action field")
+	}
+	if !contains(output, "99.99") {
+		t.Error("Should include amount field")
+	}
+	if !contains(output, "3") {
+		t.Error("Should include quantity field")
+	}
+}
+
+func TestEventAPI_EmptyMessage(t *testing.T) {
+	buf := setupTestLogger()
+
+	InfoEvent(nil).Str("key", "value").Msg("")
+
+	output := buf.String()
+	if !contains(output, "key") || !contains(output, "value") {
+		t.Error("Should log structured fields even with empty message")
+	}
+}
+
+func TestEventAPI_WithGinContext(t *testing.T) {
+	setupTestLogger()
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/test", nil)
+
+	// Should not panic and should work with gin.Context
+	InfoEvent(c).Str("endpoint", "/test").Msg("handling request")
+}
+
 // Helper functions
 
 func contains(s, substr string) bool {

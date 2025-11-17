@@ -26,12 +26,20 @@ type Logger struct {
 	logger *zerolog.Logger
 }
 
-// Converts the logger to a zerolog logger
+// ToZerolog exposes the internal zerolog logger.
+// Deprecated: Use the Event-based API instead (DebugEvent, InfoEvent, etc.)
+// for structured logging with fields. This method will be removed in a future version.
+//
+// Instead of:
+//   log.GetBaseLoggerInstance().ToZerolog().Info().Str("key", "val").Msg("message")
+// Use:
+//   log.InfoEvent(ctx).Str("key", "val").Msg("message")
 func (l *Logger) ToZerolog() *zerolog.Logger {
 	return l.logger
 }
 
-// converts a zerolog logger to a logger
+// FromZerolog converts a zerolog logger to a logger.
+// Deprecated: This is mainly for internal use. Use the standard API instead.
 func FromZerolog(logger zerolog.Logger) *Logger {
 	return &Logger{&logger}
 }
@@ -103,6 +111,70 @@ func Critical(ctx context.Context, message interface{}, args ...interface{}) {
 func Fatal(ctx context.Context, message interface{}, args ...interface{}) {
 	Critical(ctx, message, args...)
 	panic("fatal error occurred") // Using panic instead of os.Exit for better testability
+}
+
+// DebugEvent returns a zerolog.Event for structured logging at Debug level.
+// This allows adding fields before calling Msg() to log the event.
+//
+// Example:
+//   log.DebugEvent(ctx).Str("user_id", "123").Int("count", 10).Msg("processing items")
+func DebugEvent(ctx context.Context) *zerolog.Event {
+	return getEventLogger(ctx, zerolog.DebugLevel)
+}
+
+// InfoEvent returns a zerolog.Event for structured logging at Info level.
+// This allows adding fields before calling Msg() to log the event.
+//
+// Example:
+//   log.InfoEvent(ctx).Str("operation", "login").Dur("latency", duration).Msg("user logged in")
+func InfoEvent(ctx context.Context) *zerolog.Event {
+	return getEventLogger(ctx, zerolog.InfoLevel)
+}
+
+// WarnEvent returns a zerolog.Event for structured logging at Warn level.
+// This allows adding fields before calling Msg() to log the event.
+//
+// Example:
+//   log.WarnEvent(ctx).Str("reason", "rate_limit").Int("attempts", 5).Msg("rate limit approaching")
+func WarnEvent(ctx context.Context) *zerolog.Event {
+	return getEventLogger(ctx, zerolog.WarnLevel)
+}
+
+// ErrorEvent returns a zerolog.Event for structured logging at Error level.
+// This allows adding fields before calling Msg() to log the event.
+//
+// Example:
+//   log.ErrorEvent(ctx).Err(err).Str("query", sql).Msg("database query failed")
+func ErrorEvent(ctx context.Context) *zerolog.Event {
+	return getEventLogger(ctx, zerolog.ErrorLevel)
+}
+
+// CriticalEvent returns a zerolog.Event for structured logging at Fatal level (without exiting).
+// This allows adding fields before calling Msg() to log the event.
+//
+// Example:
+//   log.CriticalEvent(ctx).Err(err).Str("service", "payment").Msg("payment service unavailable")
+func CriticalEvent(ctx context.Context) *zerolog.Event {
+	return getEventLogger(ctx, zerolog.FatalLevel)
+}
+
+// getEventLogger returns a zerolog.Event with caller information for the given context and level.
+// It handles context-aware logger retrieval and sets up proper caller skip frames.
+func getEventLogger(ctx context.Context, level zerolog.Level) *zerolog.Event {
+	var logger *Logger
+	if ctx != nil {
+		logger = getCtxLogger(ctx)
+	} else if baseLogger != nil {
+		logger = baseLogger
+	} else {
+		logger = getDefaultLogger()
+	}
+
+	// Add caller information with correct skip frame count
+	// Skip frames: getEventLogger -> InfoEvent/DebugEvent/etc -> actual caller
+	frame := 2
+	lw := logger.logger.With().CallerWithSkipFrameCount(zerolog.CallerSkipFrameCount + frame).Logger()
+	return lw.WithLevel(level)
 }
 
 func (l *Logger) log(level zerolog.Level, message string, args ...interface{}) {
