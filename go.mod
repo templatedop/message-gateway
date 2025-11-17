@@ -7,9 +7,9 @@ toolchain go1.23.4
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/Jeffail/gabs v1.4.0
-	github.com/Masterminds/squirrel v1.5.4
 	github.com/arl/statsviz v0.6.0
 	github.com/bufbuild/protovalidate-go v0.8.2
+	github.com/stephenafamo/bob v0.41.1
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/gin-gonic/gin v1.10.0

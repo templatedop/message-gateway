@@ -10,10 +10,10 @@ import (
 
 	apierrors "MgApplication/api-errors"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stephenafamo/bob"
 	//l "MgApplication/api-log"
 )
 
@@ -87,9 +87,9 @@ func execReturn[T any](ctx context.Context, db *DB, sql string, args []any, scan
 	return collectedRow, nil
 }
 
-func UpdateReturning[T any](ctx context.Context, db *DB, query sq.UpdateBuilder, scanFn pgx.RowToFunc[T]) (T, error) {
+func UpdateReturning[T any](ctx context.Context, db *DB, query bob.Query, scanFn pgx.RowToFunc[T]) (T, error) {
 	var result T
-	sql, args, err := query.ToSql()
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		//	//l.Error(ctx, err)
 		return result, err
@@ -152,8 +152,8 @@ func Exec(ctx context.Context, db *DB, sql string, args []any) (pgconn.CommandTa
 	return rows.CommandTag(), rows.Err()
 }
 
-func Update(ctx context.Context, db *DB, query sq.UpdateBuilder) (pgconn.CommandTag, error) {
-	sql, args, err := query.ToSql()
+func Update(ctx context.Context, db *DB, query bob.Query) (pgconn.CommandTag, error) {
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return pgconn.CommandTag{}, err
@@ -162,8 +162,8 @@ func Update(ctx context.Context, db *DB, query sq.UpdateBuilder) (pgconn.Command
 	return execupdate(ctx, db, sql, args)
 }
 
-func Delete(ctx context.Context, db *DB, query sq.DeleteBuilder) (pgconn.CommandTag, error) {
-	sql, args, err := query.ToSql()
+func Delete(ctx context.Context, db *DB, query bob.Query) (pgconn.CommandTag, error) {
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return pgconn.CommandTag{}, err
@@ -171,8 +171,8 @@ func Delete(ctx context.Context, db *DB, query sq.DeleteBuilder) (pgconn.Command
 	return execdelete(ctx, db, sql, args)
 }
 
-func Insert(ctx context.Context, db *DB, query sq.InsertBuilder) (pgconn.CommandTag, error) {
-	sql, args, err := query.ToSql()
+func Insert(ctx context.Context, db *DB, query bob.Query) (pgconn.CommandTag, error) {
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return pgconn.CommandTag{}, err
@@ -194,10 +194,10 @@ func ExecRow(ctx context.Context, db *DB, sql string, args ...any) (pgconn.Comma
 	return ct, nil
 }
 
-func SelectOneOK[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, scanFn pgx.RowToFunc[T]) (T, bool, error) {
+func SelectOneOK[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) (T, bool, error) {
 
 	var zero T
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return zero, false, err
@@ -220,9 +220,9 @@ func SelectOneOK[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, s
 	return collectedRow, b, nil
 }
 
-func SelectOne[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, scanFn pgx.RowToFunc[T]) (T, error) {
+func SelectOne[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) (T, error) {
 	var zero T
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return zero, err
@@ -243,9 +243,9 @@ func SelectOne[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, sca
 	return collectedRow, nil
 }
 
-func InsertReturning[T any](ctx context.Context, db *DB, builder sq.InsertBuilder, scanFn pgx.RowToFunc[T]) (T, error) {
+func InsertReturning[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) (T, error) {
 	var zero T
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return zero, err
@@ -259,9 +259,9 @@ func InsertReturning[T any](ctx context.Context, db *DB, builder sq.InsertBuilde
 
 }
 
-func SelectRows[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, scanFn pgx.RowToFunc[T]) ([]T, error) {
+func SelectRows[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) ([]T, error) {
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return nil, err
@@ -282,8 +282,8 @@ func SelectRows[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, sc
 	return collectedRows, nil
 }
 
-func SelectRowsOK[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, scanFn pgx.RowToFunc[T]) ([]T, bool, error) {
-	sql, args, err := builder.ToSql()
+func SelectRowsOK[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) ([]T, bool, error) {
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return nil, false, err
@@ -308,9 +308,9 @@ func SelectRowsOK[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, 
 	return collectedRows, b, nil
 }
 
-func SelectRowsTag[T any](ctx context.Context, db *DB, builder sq.SelectBuilder, tag string) ([]T, error) {
+func SelectRowsTag[T any](ctx context.Context, db *DB, builder bob.Query, tag string) ([]T, error) {
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return nil, err
@@ -506,10 +506,10 @@ func Buildertostring(d time.Duration) string {
 	return stringbuilder.String()
 
 }
-func QueueExecRow(batch *pgx.Batch, builder sq.Sqlizer) error {
+func QueueExecRow(batch *pgx.Batch, builder bob.Query) error {
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -533,13 +533,13 @@ func QueueExecRow(batch *pgx.Batch, builder sq.Sqlizer) error {
 	return qErr
 }
 
-func QueueReturn[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *[]T) error {
+func QueueReturn[T any](batch *pgx.Batch, builder bob.Query, scanFn pgx.RowToFunc[T], result *[]T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -563,14 +563,14 @@ func QueueReturn[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.RowToFu
 	return qErr
 }
 
-func QueueReturnRow[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *T) error {
+func QueueReturnRow[T any](batch *pgx.Batch, builder bob.Query, scanFn pgx.RowToFunc[T], result *T) error {
 
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -594,10 +594,10 @@ func QueueReturnRow[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.RowT
 	return qErr
 }
 
-func TimedQueueExecRow(batch *TimedBatch, builder sq.Sqlizer) error {
+func TimedQueueExecRow(batch *TimedBatch, builder bob.Query) error {
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -625,13 +625,13 @@ func TimedQueueExecRow(batch *TimedBatch, builder sq.Sqlizer) error {
 	return qErr
 }
 
-func TimedQueueReturn[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *[]T) error {
+func TimedQueueReturn[T any](batch *TimedBatch, builder bob.Query, scanFn pgx.RowToFunc[T], result *[]T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -661,14 +661,14 @@ func TimedQueueReturn[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn pgx.R
 	return qErr
 }
 
-func TimedQueueReturnRow[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *T) error {
+func TimedQueueReturnRow[T any](batch *TimedBatch, builder bob.Query, scanFn pgx.RowToFunc[T], result *T) error {
 
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 	var qErr error
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 		//l.Error(nil, err)
 		return err
@@ -699,12 +699,12 @@ func TimedQueueReturnRow[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn pg
 	return qErr
 }
 
-func TxReturnRow[T any](ctx context.Context, tx pgx.Tx, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *T) error {
+func TxReturnRow[T any](ctx context.Context, tx pgx.Tx, builder bob.Query, scanFn pgx.RowToFunc[T], result *T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		return err
 	}
@@ -723,12 +723,12 @@ func TxReturnRow[T any](ctx context.Context, tx pgx.Tx, builder sq.Sqlizer, scan
 	return nil
 }
 
-func TxRows[T any](ctx context.Context, tx pgx.Tx, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *[]T) error {
+func TxRows[T any](ctx context.Context, tx pgx.Tx, builder bob.Query, scanFn pgx.RowToFunc[T], result *[]T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return err
@@ -750,8 +750,8 @@ func TxRows[T any](ctx context.Context, tx pgx.Tx, builder sq.Sqlizer, scanFn pg
 	return nil
 }
 
-func TxExec(ctx context.Context, tx pgx.Tx, builder sq.Sqlizer) error {
-	sql, args, err := builder.ToSql()
+func TxExec(ctx context.Context, tx pgx.Tx, builder bob.Query) error {
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return err
@@ -824,9 +824,9 @@ func CollectOneRowOK[T any](rows pgx.Rows, fn pgx.RowToFunc[T]) (T, bool, error)
 	return value, true, nil
 }
 
-func DBQueryMultipleRows(ctx context.Context, query sq.SelectBuilder, dbs *DB, str interface{}) ([]interface{}, error) {
+func DBQueryMultipleRows(ctx context.Context, query bob.Query, dbs *DB, str interface{}) ([]interface{}, error) {
 	// Generate SQL query and arguments
-	sql, args, err := query.ToSql()
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -906,9 +906,9 @@ func Tx(gctx *gin.Context, dbPool *DB, f func(ctx context.Context, gctx *gin.Con
 	return nil
 }
 
-func InsertReturningrows[T any](ctx context.Context, db *DB, builder sq.InsertBuilder, scanFn pgx.RowToFunc[T]) ([]T, error) {
+func InsertReturningrows[T any](ctx context.Context, db *DB, builder bob.Query, scanFn pgx.RowToFunc[T]) ([]T, error) {
 
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(ctx, 1)
 	if err != nil {
 		//l.Error(ctx, err)
 		return nil, err
@@ -926,14 +926,14 @@ func InsertReturningrows[T any](ctx context.Context, db *DB, builder sq.InsertBu
 
 }
 
-func QueueReturnBulk[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *[]T) error {
+func QueueReturnBulk[T any](batch *pgx.Batch, builder bob.Query, scanFn pgx.RowToFunc[T], result *[]T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 
 	var qErr error
 	// Build the SQL query and arguments
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 
 		return err
@@ -961,14 +961,14 @@ func QueueReturnBulk[T any](batch *pgx.Batch, builder sq.Sqlizer, scanFn pgx.Row
 	return qErr
 }
 
-func TimedQueueReturnBulk[T any](batch *TimedBatch, builder sq.Sqlizer, scanFn pgx.RowToFunc[T], result *[]T) error {
+func TimedQueueReturnBulk[T any](batch *TimedBatch, builder bob.Query, scanFn pgx.RowToFunc[T], result *[]T) error {
 	if err := validateOutputVariable(result); err != nil {
 		return err
 	}
 
 	var qErr error
 	// Build the SQL query and arguments
-	sql, args, err := builder.ToSql()
+	sql, args, err := builder.BuildN(context.Background(), 1)
 	if err != nil {
 
 		return err

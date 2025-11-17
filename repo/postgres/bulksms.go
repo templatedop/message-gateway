@@ -10,9 +10,13 @@ import (
 	dblib "MgApplication/api-db"
 	log "MgApplication/api-log"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 )
 
 func (cr *MgApplicationRepository) InitiateBulkSMSRepo(gctx *gin.Context, mbulk *domain.InitiateBulkSMS) (string, error) {

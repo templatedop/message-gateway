@@ -15,10 +15,14 @@ import (
 	dblib "MgApplication/api-db"
 	log "MgApplication/api-log"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 	"github.com/jackc/pgx/v5"
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 )
 
 type MgApplicationRepository struct {
@@ -154,9 +158,11 @@ func (cr *MgApplicationRepository) SaveMsgRequestTx(gctx *context.Context, msgap
 
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		//checking whether applicaiton exists in the database
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_application").
-			Where(squirrel.Eq{"application_id": msgapp.ApplicationID})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_application"),
+			sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking existence of application in msg_application table in SaveMsgRequest: %s", err.Error())
@@ -170,15 +176,12 @@ func (cr *MgApplicationRepository) SaveMsgRequestTx(gctx *context.Context, msgap
 		// 	From("msg_template").
 		// 	Where(squirrel.And{squirrel.Eq{"ANY(string_to_array(application_id,','))": msgapp.ApplicationID}, squirrel.Eq{"template_id": msgapp.TemplateID}})
 
-		query2 := dblib.Psql.Select("COUNT(1) AS count").
-			From("msg_template").
-			Where(
-				squirrel.Expr(
-					"EXISTS (SELECT 1 FROM unnest(string_to_array(application_id, ',')) AS app_id WHERE app_id = ?)",
-					msgapp.ApplicationID,
-				),
-			).
-			Where("template_id = ?", msgapp.TemplateID)
+		query2 := psql.Select(
+			sm.Columns("COUNT(1) AS count"),
+			sm.From("msg_template"),
+			sm.Where(psql.Raw("EXISTS (SELECT 1 FROM unnest(string_to_array(application_id, ',')) AS app_id WHERE app_id = ?)", msgapp.ApplicationID)),
+			sm.Where(psql.Quote("template_id").EQ(psql.Arg(msgapp.TemplateID))),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether a template registered for an application in SaveMsgRequest function: %s", err.Error())
@@ -199,14 +202,26 @@ func (cr *MgApplicationRepository) SaveMsgRequestTx(gctx *context.Context, msgap
 		}
 		// Check if data already exists
 		// Insert into msg_request and retrieve the gateway
-		query3 := dblib.Psql.Insert("msg_request").
-			Columns("gateway", "application_id", "facility_id", "message_text", "sender_id", "entity_id", "template_id", "status", "priority", "mobile_number").
-			Select(dblib.Psql.Select("mt.gateway").
-				Column(squirrel.Expr("? as application_id, ? as facility_id, ? as message_text, ? as sender_id, ? as entity_id, ? as template_id, ? as status, ? as priority, ? as mobile_number",
-					msgapp.ApplicationID, msgapp.FacilityID, msgapp.MessageText, msgapp.SenderID, msgapp.EntityId, msgapp.TemplateID, "pending", msgapp.Priority, mobileNumbers)).
-				From("msg_template mt").
-				Where(squirrel.Eq{"mt.template_id": msgapp.TemplateID})).
-			Suffix(`RETURNING "request_id", "communication_id", "gateway"`)
+		subquery := psql.Select(
+			sm.Columns("mt.gateway"),
+			sm.Columns(psql.Arg(msgapp.ApplicationID).As("application_id")),
+			sm.Columns(psql.Arg(msgapp.FacilityID).As("facility_id")),
+			sm.Columns(psql.Arg(msgapp.MessageText).As("message_text")),
+			sm.Columns(psql.Arg(msgapp.SenderID).As("sender_id")),
+			sm.Columns(psql.Arg(msgapp.EntityId).As("entity_id")),
+			sm.Columns(psql.Arg(msgapp.TemplateID).As("template_id")),
+			sm.Columns(psql.Arg("pending").As("status")),
+			sm.Columns(psql.Arg(msgapp.Priority).As("priority")),
+			sm.Columns(psql.Arg(mobileNumbers).As("mobile_number")),
+			sm.From("msg_template mt"),
+			sm.Where(psql.Quote("mt.template_id").EQ(psql.Arg(msgapp.TemplateID))),
+		)
+
+		query3 := psql.Insert(
+			im.Into("msg_request", "gateway", "application_id", "facility_id", "message_text", "sender_id", "entity_id", "template_id", "status", "priority", "mobile_number"),
+			im.Query(subquery),
+			im.Returning("request_id", "communication_id", "gateway"),
+		)
 
 		msgreq1, err = dblib.InsertReturning(ctx, cr.Db, query3, pgx.RowToStructByNameLax[domain.MsgRequest])
 		if err != nil {

@@ -11,9 +11,13 @@ import (
 	dblib "MgApplication/api-db"
 	log "MgApplication/api-log"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 )
 
 type ApplicationRepository struct {
@@ -39,9 +43,11 @@ func (ar *ApplicationRepository) CreateMsgApplicationRepo(ctx context.Context, m
 	var msgapplication domain.MsgApplications
 	TxDB := ar.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Check if data already exists
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_application").
-			Where(squirrel.Eq{"application_name": msgapp.ApplicationName})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_application"),
+			sm.Where(psql.Quote("application_name").EQ(psql.Arg(msgapp.ApplicationName))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether an application exists or not in CreateMsgApplication repo function: %s", err.Error())
@@ -50,10 +56,11 @@ func (ar *ApplicationRepository) CreateMsgApplicationRepo(ctx context.Context, m
 		if Counter.Count > 0 {
 			return errors.New("data already exists for this application")
 		}
-		query2 := dblib.Psql.Insert("msg_application").
-			Columns("application_name", "request_type", "secret_key", "status_cd").
-			Values(msgapp.ApplicationName, msgapp.RequestType, msgapp.SecretKey, msgapp.Status).
-			Suffix("RETURNING application_id,application_name,request_type,created_date,updated_date,status_cd")
+		query2 := psql.Insert(
+			im.Into("msg_application", "application_name", "request_type", "secret_key", "status_cd"),
+			im.Values(psql.Arg(msgapp.ApplicationName, msgapp.RequestType, msgapp.SecretKey, msgapp.Status)),
+			im.Returning("application_id", "application_name", "request_type", "created_date", "updated_date", "status_cd"),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.MsgApplications], &msgapplication)
 		if err != nil {
 			log.Error(ctx, "Error executing insert query in CreateMsgApplication repo function: %s", err.Error())
@@ -121,13 +128,15 @@ func (ar *ApplicationRepository) FetchApplicationRepo(ctx context.Context, msgap
 	var listApplications []domain.MsgApplicationsGet
 
 	// TxDB := ar.Db.WithTx(ctx, func(tx pgx.Tx) error {
-	query := dblib.Psql.Select("ma.application_id", "ma.application_name", "ma.status_cd", "STRING_AGG(mr.request_type, ', ') AS request_type").
-		From("msg_application ma").
-		Join("LATERAL unnest(string_to_array(ma.request_type, ',')) AS rt(rt_value) ON true").
-		Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code").
-		Where(squirrel.Eq{"application_id": msgapp.ApplicationID}).
-		GroupBy("ma.application_id", "ma.application_name", "ma.status_cd").
-		OrderBy("ma.application_id")
+	query := psql.Select(
+		sm.Columns("ma.application_id", "ma.application_name", "ma.status_cd", "STRING_AGG(mr.request_type, ', ') AS request_type"),
+		sm.From("msg_application ma"),
+		sm.Join("LATERAL unnest(string_to_array(ma.request_type, ',')) AS rt(rt_value) ON true"),
+		sm.Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code"),
+		sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+		sm.GroupBy("ma.application_id", "ma.application_name", "ma.status_cd"),
+		sm.OrderBy("ma.application_id"),
+	)
 
 	listApplications, err := dblib.SelectRows(ctx, ar.Db, query, pgx.RowToStructByNameLax[domain.MsgApplicationsGet])
 	if err != nil {
@@ -201,9 +210,11 @@ func (ar *ApplicationRepository) UpdateMsgApplicationRepo(ctx context.Context, m
 	var msgapplication domain.EditApplication
 	TxDB := ar.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Check if data already exists
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_application").
-			Where(squirrel.Eq{"application_id": msgapp.ApplicationID})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_application"),
+			sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether an application already exists or not in EditMsgApplication repo function:  %s", err.Error())
@@ -213,9 +224,11 @@ func (ar *ApplicationRepository) UpdateMsgApplicationRepo(ctx context.Context, m
 			log.Error(ctx, "No application with selected details are available")
 			return errors.New("no application with selected details available")
 		}
-		query2 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_application").
-			Where(squirrel.And{squirrel.Eq{"application_name": msgapp.ApplicationName}, squirrel.NotEq{"application_id": msgapp.ApplicationID}})
+		query2 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_application"),
+			sm.Where(psql.Quote("application_name").EQ(psql.Arg(msgapp.ApplicationName)).And(psql.Quote("application_id").NE(psql.Arg(msgapp.ApplicationID)))),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error executing select query in EditMsgApplication repo function:  %s", err.Error())
@@ -225,13 +238,12 @@ func (ar *ApplicationRepository) UpdateMsgApplicationRepo(ctx context.Context, m
 			log.Error(ctx, "Already One application with the selected details already exists")
 			return errors.New("already one application with these selected details is available")
 		}
-		query3 := dblib.Psql.Update("msg_application").
-			Set("application_name", msgapp.ApplicationName).
-			Set("request_type", msgapp.RequestType).
-			Set("status_cd", msgapp.Status).
-			Set("updated_date", squirrel.Expr("current_timestamp")).
-			Where(squirrel.Eq{"application_id": msgapp.ApplicationID}).
-			Suffix("RETURNING application_id,application_name,request_type,updated_date,status_cd")
+		query3 := psql.Update(
+			um.Table("msg_application"),
+			um.Set("application_name", "request_type", "status_cd", "updated_date").ToArg(msgapp.ApplicationName, msgapp.RequestType, msgapp.Status, psql.Raw("current_timestamp")),
+			um.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+			um.Returning("application_id", "application_name", "request_type", "updated_date", "status_cd"),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query3, pgx.RowToStructByNameLax[domain.EditApplication], &msgapplication)
 		if err != nil {
 			log.Error(ctx, "Error executing update query in EditMsgApplication repo function:  %s", err.Error())
@@ -254,9 +266,11 @@ func (ar *ApplicationRepository) ToggleApplicationStatusRepo(gctx *gin.Context, 
 	var Counter domain.Counter
 	TxDB := ar.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Check if data already exists
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_application").
-			Where(squirrel.Eq{"application_id": msgapp.ApplicationID})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_application"),
+			sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether an application exists or not in StatusMsgApplication repo function:  %s", err.Error())
@@ -265,10 +279,11 @@ func (ar *ApplicationRepository) ToggleApplicationStatusRepo(gctx *gin.Context, 
 		if Counter.Count == 0 {
 			return errors.New("no application with selected details available")
 		}
-		query2 := dblib.Psql.Update("msg_application").
-			Set("status_cd", squirrel.Expr("CASE WHEN status_cd = 0 THEN 1 ELSE 0 END")).
-			Set("updated_date", squirrel.Expr("current_timestamp")).
-			Where(squirrel.Eq{"application_id": msgapp.ApplicationID})
+		query2 := psql.Update(
+			um.Table("msg_application"),
+			um.Set("status_cd", "updated_date").To(psql.Raw("CASE WHEN status_cd = 0 THEN 1 ELSE 0 END"), psql.Raw("current_timestamp")),
+			um.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+		)
 		err = dblib.TxExec(ctx, tx, query2)
 		if err != nil {
 			log.Error(ctx, "Error executing update query in StatusMsgApplication repo function:  %s", err.Error())
@@ -336,37 +351,29 @@ func (ar *ApplicationRepository) ListApplicationsRepo(ctx context.Context, msgap
 	defer cancel()
 
 	// Build the base query
-	query := dblib.Psql.Select("ma.application_id", "ma.application_name", "ma.status_cd", "STRING_AGG(mr.request_type, ', ') AS request_type").
-		From("msg_application ma").
-		Join("LATERAL unnest(string_to_array(ma.request_type, ',')) AS rt(rt_value) ON true").
-		Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code")
-
-		// Check the Status field for true, false, or nil
-		// if msgapp.Status != nil {
-		// 	if *msgapp.Status {
-		// 		query = query.Where(squirrel.Eq{"ma.status_cd": 1}) // Active applications
-		// 	} else {
-		// 		query = query.Where(squirrel.Eq{"ma.status_cd": 0}) // Inactive applications
-		// 	}
-		// }
-
-		// Check the Status field for true, false
-		//if msgapp.Status != nil {
-	if msgapp.Status {
-		query = query.Where(squirrel.Eq{"ma.status_cd": 1}) // Active applications
+	mods := []bob.Mod[*psql.SelectQuery]{
+		sm.Columns("ma.application_id", "ma.application_name", "ma.status_cd", "STRING_AGG(mr.request_type, ', ') AS request_type"),
+		sm.From("msg_application ma"),
+		sm.Join("LATERAL unnest(string_to_array(ma.request_type, ',')) AS rt(rt_value) ON true"),
+		sm.Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code"),
 	}
-	// else {
-	// 	query = query.Where(squirrel.Eq{"ma.status_cd": 0}) // Inactive applications
-	// }
-	//}
 
-	query = query.GroupBy("ma.application_id", "ma.application_name", "ma.status_cd").
-		OrderBy("ma.application_id").
-		Offset(meta.Skip * meta.Limit).
-		Limit(meta.Limit)
+	// Check the Status field for true, false
+	if msgapp.Status {
+		mods = append(mods, sm.Where(psql.Quote("ma.status_cd").EQ(psql.Arg(1)))) // Active applications
+	}
+
+	mods = append(mods,
+		sm.GroupBy("ma.application_id", "ma.application_name", "ma.status_cd"),
+		sm.OrderBy("ma.application_id"),
+		sm.Offset(int64(meta.Skip*meta.Limit)),
+		sm.Limit(int64(meta.Limit)),
+	)
+
+	query := psql.Select(mods...)
 
 	// Convert query to SQL string and log it
-	sql, args, err := query.ToSql()
+	sql, args, err := query.BuildN(ctx, 1)
 	if err != nil {
 		log.Error(ctx, "Error generating SQL query: %s", err.Error())
 		return nil, err

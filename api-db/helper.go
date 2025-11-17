@@ -2,15 +2,7 @@ package db
 
 import (
 	"database/sql"
-
-	sq "github.com/Masterminds/squirrel"
 )
-
-/**
- * psql holds a reference to squirrel.StatementBuilderType
- * which is used to build SQL queries that compatible with PostgreSQL syntax
- */
-var Psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 // nullString converts a string to sql.NullString for empty string check
 func NullString(value string) sql.NullString {
