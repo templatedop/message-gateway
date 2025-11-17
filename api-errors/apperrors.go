@@ -28,19 +28,24 @@ type FieldError struct {
 }
 
 // NewAppError creates a new instance of AppError with the provided message, code, and original error.
-// It also collects the current stack trace.
+// It conditionally collects a stack trace based on the global StackTraceConfig settings.
+//
+// Stack trace collection behavior:
+//   - If StackTraceConfig.Enabled is false, no stack trace is collected (zero overhead).
+//   - If StackTraceConfig.CollectFor5xxOnly is true, stack traces are only collected for status codes >= 500.
+//   - Stack trace depth is limited by StackTraceConfig.MaxDepth.
 //
 // Parameters:
 //   - message: A string representing the error message.
-//   - code: An integer representing the HTTP status code.
+//   - code: An integer representing the HTTP status code (used to determine if stack trace should be collected).
 //   - originalError: The original error that caused this error.
 //
 // Returns:
 //
-//	An instance of AppError containing the provided details and the current stack trace.
+//	An instance of AppError containing the provided details and optionally a stack trace.
 func NewAppError(message string, code int, originalError error) AppError {
 	return AppError{
-		Stack:         collectStackTrace(),
+		Stack:         collectStackTraceConditional(code),
 		Message:       message,
 		Code:          code,
 		OriginalError: originalError,
@@ -48,20 +53,25 @@ func NewAppError(message string, code int, originalError error) AppError {
 }
 
 // NewAppErrorWithId creates a new instance of AppError with the provided message, code, original error, and id.
-// It also collects the current stack trace.
+// It conditionally collects a stack trace based on the global StackTraceConfig settings.
+//
+// Stack trace collection behavior:
+//   - If StackTraceConfig.Enabled is false, no stack trace is collected (zero overhead).
+//   - If StackTraceConfig.CollectFor5xxOnly is true, stack traces are only collected for status codes >= 500.
+//   - Stack trace depth is limited by StackTraceConfig.MaxDepth.
 //
 // Parameters:
 //   - message: A string representing the error message.
-//   - code: An integer representing the HTTP status code.
+//   - code: An integer representing the HTTP status code (used to determine if stack trace should be collected).
 //   - originalError: The original error that caused this error.
 //   - id: A string representing the unique identifier for the error.
 //
 // Returns:
 //
-//	An instance of AppError containing the provided details and the current stack trace.
+//	An instance of AppError containing the provided details and optionally a stack trace.
 func NewAppErrorWithId(message string, code int, originalError error, id string) AppError {
 	return AppError{
-		Stack:         collectStackTrace(),
+		Stack:         collectStackTraceConditional(code),
 		Message:       message,
 		Code:          code,
 		OriginalError: originalError,
