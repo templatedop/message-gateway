@@ -84,26 +84,36 @@ func SetCtxLoggerMiddleware(c *gin.Context) {
 	c.Next()
 }
 
-// GetCtxLogger returns the logger embedded in the gin context
+// getCtxLogger returns the logger embedded in the context.
+// If no logger is found, it returns the base logger instance.
+// This function handles both gin.Context and context.Context types.
 func getCtxLogger(ctx context.Context) *Logger {
-	//check null
 	var value any
 	if ctx == nil {
 		baseLogger := GetBaseLoggerInstance()
-		Debug(nil, "Context is nil. Returning Base Logger.")
+		// This is expected in some cases (e.g., startup), so we log at debug level
+		if baseLogger != nil && baseLogger.logger != nil && baseLogger.logger.GetLevel() <= zerolog.DebugLevel {
+			baseLogger.logger.Debug().Msg("Context is nil, returning base logger")
+		}
 		return baseLogger
 	} else if ginCtx, ok := ctx.(*gin.Context); ok {
 		// ctx is of type *gin.Context
 		if value = ginCtx.Request.Context().Value(ctxLoggerKey); value == nil {
 			baseLogger := GetBaseLoggerInstance()
-			// Warn(nil, "Could not find logger inside context. Returning Base Logger.")
+			// Logger not in context is common before middleware runs
+			if baseLogger != nil && baseLogger.logger != nil && baseLogger.logger.GetLevel() <= zerolog.DebugLevel {
+				baseLogger.logger.Debug().Msg("Logger not found in gin.Context, returning base logger")
+			}
 			return baseLogger
 		}
 	} else {
 		// ctx is of type context.Context
 		if value = ctx.Value(ctxLoggerKey); value == nil {
 			baseLogger := GetBaseLoggerInstance()
-			// Warn(nil, "Could not find logger inside context. Returning Base Logger.")
+			// Logger not in context is common in non-HTTP contexts
+			if baseLogger != nil && baseLogger.logger != nil && baseLogger.logger.GetLevel() <= zerolog.DebugLevel {
+				baseLogger.logger.Debug().Msg("Logger not found in context.Context, returning base logger")
+			}
 			return baseLogger
 		}
 	}
@@ -111,7 +121,10 @@ func getCtxLogger(ctx context.Context) *Logger {
 	contextLogger, ok := value.(*Logger)
 	if !ok {
 		baseLogger := GetBaseLoggerInstance()
-		// Warn(nil, "Logger found in context is not of type *Logger. Returning Base Logger.")
+		// This is unexpected and should be warned about
+		if baseLogger != nil && baseLogger.logger != nil {
+			baseLogger.logger.Warn().Msgf("Logger in context has wrong type: %T, returning base logger", value)
+		}
 		return baseLogger
 	}
 	return contextLogger
@@ -141,7 +154,7 @@ func RequestResponseLoggerMiddleware(c *gin.Context) {
 		Int("bytes-sent", c.Writer.Size()).Msg("request")
 }
 
-// SetCtxLogger sets the request metadata in the logger
+// setRequestMetadata sets the request metadata in the logger
 func (l *Logger) setRequestMetadata(c *gin.Context) zerolog.Logger {
 	requestID := c.Request.Header.Get("X-Request-ID")
 	if requestID == "" {
@@ -159,25 +172,25 @@ func (l *Logger) setRequestMetadata(c *gin.Context) zerolog.Logger {
 		}
 	}
 
-	officeId := c.Request.Header.Get("x-office-id")
-	if officeId == "" {
-		if ctxOfficeId, ok := c.Request.Context().Value("x-office-id").(string); ok && ctxOfficeId != "" {
-			officeId = ctxOfficeId
+	officeID := c.Request.Header.Get("x-office-id")
+	if officeID == "" {
+		if ctxOfficeID, ok := c.Request.Context().Value("x-office-id").(string); ok && ctxOfficeID != "" {
+			officeID = ctxOfficeID
 		} else {
-			officeId = ""
+			officeID = ""
 		}
 	}
 
-	userId := c.Request.Header.Get("x-user-id")
-	if userId == "" {
-		if ctxUserId, ok := c.Request.Context().Value("x-user-id").(string); ok && ctxUserId != "" {
-			userId = ctxUserId
+	userID := c.Request.Header.Get("x-user-id")
+	if userID == "" {
+		if ctxUserID, ok := c.Request.Context().Value("x-user-id").(string); ok && ctxUserID != "" {
+			userID = ctxUserID
 		} else {
-			userId = ""
+			userID = ""
 		}
 	}
 
-	return l.logger.With().Str(string(requestIDContextKey), requestID).Str(string(traceIDKey), traceID).Str(string(officeIDKey), officeId).Str(string(userIDKey), userId).Logger()
+	return l.logger.With().Str(string(requestIDContextKey), requestID).Str(string(traceIDKey), traceID).Str(string(officeIDKey), officeID).Str(string(userIDKey), userID).Logger()
 
 }
 

@@ -84,8 +84,10 @@ func Error(ctx context.Context, message interface{}, args ...interface{}) {
 	}
 }
 
-// Fatal -.
-func Fatal(ctx context.Context, message interface{}, args ...interface{}) {
+// Critical logs a message at FatalLevel but does not exit the application.
+// Use this for critical errors that should be logged at the highest severity
+// but where you want to handle cleanup or continue execution.
+func Critical(ctx context.Context, message interface{}, args ...interface{}) {
 	if ctx != nil {
 		getCtxLogger(ctx).msg(zerolog.FatalLevel, message, args...)
 	} else if baseLogger != nil {
@@ -93,8 +95,14 @@ func Fatal(ctx context.Context, message interface{}, args ...interface{}) {
 	} else {
 		getDefaultLogger().msg(zerolog.FatalLevel, message, args...)
 	}
+}
 
-	// os.Exit(1)
+// Fatal logs a message at FatalLevel and exits the application with status code 1.
+// This follows standard logging library conventions where Fatal terminates the program.
+// For critical errors that don't require immediate exit, use Critical instead.
+func Fatal(ctx context.Context, message interface{}, args ...interface{}) {
+	Critical(ctx, message, args...)
+	panic("fatal error occurred") // Using panic instead of os.Exit for better testability
 }
 
 func (l *Logger) log(level zerolog.Level, message string, args ...interface{}) {
