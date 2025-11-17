@@ -252,9 +252,11 @@ func (cr *MgApplicationRepository) SaveMsgRequest(gctx *context.Context, msgapp 
 	var msgreq1 domain.MsgRequest
 
 	//checking whether application exists in the database
-	query1 := dblib.Psql.Select("COUNT(1) as count").
-		From("msg_application").
-		Where(squirrel.Eq{"application_id": msgapp.ApplicationID})
+	query1 := psql.Select(
+		sm.Columns("COUNT(1) as count"),
+		sm.From("msg_application"),
+		sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgapp.ApplicationID))),
+	)
 	Counter, err := dblib.SelectOne(ctx, cr.Db, query1, pgx.RowToStructByNameLax[domain.Counter])
 	// err := dblib.ReturnRow(ctx, cr.Db, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 	if err != nil {
@@ -266,15 +268,12 @@ func (cr *MgApplicationRepository) SaveMsgRequest(gctx *context.Context, msgapp 
 	}
 
 	//checking whether application and templateid combination available or not
-	query2 := dblib.Psql.Select("COUNT(1) AS count").
-		From("msg_template").
-		Where(
-			squirrel.Expr(
-				"EXISTS (SELECT 1 FROM unnest(string_to_array(application_id, ',')) AS app_id WHERE app_id = ?)",
-				msgapp.ApplicationID,
-			),
-		).
-		Where("template_id = ?", msgapp.TemplateID)
+	query2 := psql.Select(
+		sm.Columns("COUNT(1) AS count"),
+		sm.From("msg_template"),
+		sm.Where(psql.Raw("EXISTS (SELECT 1 FROM unnest(string_to_array(application_id, ',')) AS app_id WHERE app_id = ?)", msgapp.ApplicationID)),
+		sm.Where(psql.Quote("template_id").EQ(psql.Arg(msgapp.TemplateID))),
+	)
 	// err = dblib.ReturnRow(ctx, cr.Db, query2, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 	Counter, err = dblib.SelectOne(ctx, cr.Db, query2, pgx.RowToStructByNameLax[domain.Counter])
 	if err != nil {
@@ -297,14 +296,26 @@ func (cr *MgApplicationRepository) SaveMsgRequest(gctx *context.Context, msgapp 
 	}
 
 	// Insert into msg_request and retrieve the gateway
-	query3 := dblib.Psql.Insert("msg_request").
-		Columns("gateway", "application_id", "facility_id", "message_text", "sender_id", "entity_id", "template_id", "status", "priority", "mobile_number").
-		Select(dblib.Psql.Select("mt.gateway").
-			Column(squirrel.Expr("? as application_id, ? as facility_id, ? as message_text, ? as sender_id, ? as entity_id, ? as template_id, ? as status, ? as priority, ? as mobile_number",
-				msgapp.ApplicationID, msgapp.FacilityID, msgapp.MessageText, msgapp.SenderID, msgapp.EntityId, msgapp.TemplateID, "pending", msgapp.Priority, mobileNumbers)).
-			From("msg_template mt").
-			Where(squirrel.Eq{"mt.template_id": msgapp.TemplateID})).
-		Suffix(`RETURNING "request_id", "communication_id", "gateway"`)
+	subquery := psql.Select(
+		sm.Columns("mt.gateway"),
+		sm.Columns(psql.Arg(msgapp.ApplicationID).As("application_id")),
+		sm.Columns(psql.Arg(msgapp.FacilityID).As("facility_id")),
+		sm.Columns(psql.Arg(msgapp.MessageText).As("message_text")),
+		sm.Columns(psql.Arg(msgapp.SenderID).As("sender_id")),
+		sm.Columns(psql.Arg(msgapp.EntityId).As("entity_id")),
+		sm.Columns(psql.Arg(msgapp.TemplateID).As("template_id")),
+		sm.Columns(psql.Arg("pending").As("status")),
+		sm.Columns(psql.Arg(msgapp.Priority).As("priority")),
+		sm.Columns(psql.Arg(mobileNumbers).As("mobile_number")),
+		sm.From("msg_template mt"),
+		sm.Where(psql.Quote("mt.template_id").EQ(psql.Arg(msgapp.TemplateID))),
+	)
+
+	query3 := psql.Insert(
+		im.Into("msg_request", "gateway", "application_id", "facility_id", "message_text", "sender_id", "entity_id", "template_id", "status", "priority", "mobile_number"),
+		im.Query(subquery),
+		im.Returning("request_id", "communication_id", "gateway"),
+	)
 
 	msgreq1, err = dblib.InsertReturning(ctx, cr.Db, query3, pgx.RowToStructByNameLax[domain.MsgRequest])
 	if err != nil {
@@ -325,9 +336,11 @@ func (cr *MgApplicationRepository) GetGateway(gctx *context.Context, msgreq *dom
 	var Counter domain.Counter
 	var msgreq1 domain.MsgRequest
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_template").
-			Where(squirrel.Eq{"template_id": msgreq.TemplateID})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_template"),
+			sm.Where(psql.Quote("template_id").EQ(psql.Arg(msgreq.TemplateID))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether a template exists or not in GetGateway repo function:  %s", err.Error())
@@ -336,9 +349,11 @@ func (cr *MgApplicationRepository) GetGateway(gctx *context.Context, msgreq *dom
 		if Counter.Count == 0 {
 			return errors.New("template does not exists, hence cannot continue")
 		}
-		query2 := dblib.Psql.Select(`0 as req_id, 'Not Applicable' as communication_id, gateway, entity_id, message_type`).
-			From("msg_template").
-			Where(squirrel.Eq{"template_id": msgreq.TemplateID})
+		query2 := psql.Select(
+			sm.Columns("0 as req_id", "'Not Applicable' as communication_id", "gateway", "entity_id", "message_type"),
+			sm.From("msg_template"),
+			sm.Where(psql.Quote("template_id").EQ(psql.Arg(msgreq.TemplateID))),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.MsgRequest], &msgreq1)
 		if err != nil {
 			log.Error(ctx, "Error executing query in GetGateway repo function:  %s", err.Error())
@@ -364,10 +379,11 @@ func (cr *MgApplicationRepository) SaveGatewayDetailsTx(gctx *gin.Context, Gatew
 	defer cancel()
 
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
-		query := dblib.Psql.Update("msg_request").
-			Set("gateway", Gateway).
-			Set("updated_date", squirrel.Expr("current_timestamp")).
-			Where(squirrel.Eq{"communication_id": CommunicationID})
+		query := psql.Update(
+			um.Table("msg_request"),
+			um.Set("gateway", "updated_date").ToArg(Gateway, psql.Raw("current_timestamp")),
+			um.Where(psql.Quote("communication_id").EQ(psql.Arg(CommunicationID))),
+		)
 
 		err := dblib.TxExec(ctx, tx, query)
 		if err != nil {
@@ -387,10 +403,11 @@ func (cr *MgApplicationRepository) SaveGatewayDetails(gctx *gin.Context, Gateway
 
 	ctx, cancel := context.WithTimeout(gctx.Request.Context(), cr.Cfg.GetDuration("db.querytimeoutlow"))
 	defer cancel()
-	query := dblib.Psql.Update("msg_request").
-		Set("gateway", Gateway).
-		Set("updated_date", squirrel.Expr("current_timestamp")).
-		Where(squirrel.Eq{"communication_id": CommunicationID})
+	query := psql.Update(
+		um.Table("msg_request"),
+		um.Set("gateway", "updated_date").ToArg(Gateway, psql.Raw("current_timestamp")),
+		um.Where(psql.Quote("communication_id").EQ(psql.Arg(CommunicationID))),
+	)
 
 	_, err := dblib.Update(ctx, cr.Db, query)
 	if err != nil {
@@ -406,14 +423,11 @@ func (cr *MgApplicationRepository) SaveResponseTx(gctx *context.Context, msgRsp 
 	defer cancel()
 
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
-		query := dblib.Psql.Update("msg_request").
-			Set("status", "submitted").
-			Set("updated_date", squirrel.Expr("current_timestamp")).
-			Set("reference_id", msgRsp.ReferenceID).
-			Set("response_code", msgRsp.ResponseCode).
-			Set("response_message", msgRsp.ResponseText).
-			Set("complete_response", msgRsp.CompleteResponse).
-			Where(squirrel.Eq{"communication_id": msgRsp.CommunicationID})
+		query := psql.Update(
+			um.Table("msg_request"),
+			um.Set("status", "updated_date", "reference_id", "response_code", "response_message", "complete_response").ToArg("submitted", psql.Raw("current_timestamp"), msgRsp.ReferenceID, msgRsp.ResponseCode, msgRsp.ResponseText, msgRsp.CompleteResponse),
+			um.Where(psql.Quote("communication_id").EQ(psql.Arg(msgRsp.CommunicationID))),
+		)
 		err := dblib.TxExec(ctx, tx, query)
 		if err != nil {
 			log.Error(ctx, "Error executing update query in SaveResponse repo function:  %s", err.Error())
@@ -433,14 +447,11 @@ func (cr *MgApplicationRepository) SaveResponse(gctx *context.Context, msgRsp *d
 	ctx, cancel := context.WithTimeout(context.Background(), cr.Cfg.GetDuration("db.querytimeoutmed"))
 	defer cancel()
 
-	query := dblib.Psql.Update("msg_request").
-		Set("status", "submitted").
-		Set("updated_date", squirrel.Expr("current_timestamp")).
-		Set("reference_id", msgRsp.ReferenceID).
-		Set("response_code", msgRsp.ResponseCode).
-		Set("response_message", msgRsp.ResponseText).
-		Set("complete_response", msgRsp.CompleteResponse).
-		Where(squirrel.Eq{"communication_id": msgRsp.CommunicationID})
+	query := psql.Update(
+		um.Table("msg_request"),
+		um.Set("status", "updated_date", "reference_id", "response_code", "response_message", "complete_response").ToArg("submitted", psql.Raw("current_timestamp"), msgRsp.ReferenceID, msgRsp.ResponseCode, msgRsp.ResponseText, msgRsp.CompleteResponse),
+		um.Where(psql.Quote("communication_id").EQ(psql.Arg(msgRsp.CommunicationID))),
+	)
 
 	_, err := dblib.Update(ctx, cr.Db, query)
 	if err != nil {

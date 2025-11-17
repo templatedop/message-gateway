@@ -42,9 +42,11 @@ func (pr *ProviderRepository) CreateMessageProviderRepo(gctx *gin.Context, msgpr
 	var msgProvider1 domain.MsgProvider
 	TxDB := pr.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Check if data already exists
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_provider").
-			Where(squirrel.Eq{"provider_name": msgprovider.ProviderName})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_provider"),
+			sm.Where(psql.Quote("provider_name").EQ(psql.Arg(msgprovider.ProviderName))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether a provider already exists with the inputted provider_name in CreateMsgProvider: %s", err.Error())
@@ -53,10 +55,11 @@ func (pr *ProviderRepository) CreateMessageProviderRepo(gctx *gin.Context, msgpr
 		if Counter.Count > 0 {
 			return errors.New("provider already exists, cannot save")
 		}
-		query2 := dblib.Psql.Insert("msg_provider").
-			Columns("provider_name", "short_name", "services", "configuration_key", "status_cd").
-			Values(msgprovider.ProviderName, msgprovider.ShortName, msgprovider.Services, msgprovider.ConfigurationKeys, msgprovider.Status).
-			Suffix("RETURNING provider_id, provider_name,short_name, services, configuration_key, status_cd")
+		query2 := psql.Insert(
+			im.Into("msg_provider", "provider_name", "short_name", "services", "configuration_key", "status_cd"),
+			im.Values(psql.Arg(msgprovider.ProviderName, msgprovider.ShortName, msgprovider.Services, msgprovider.ConfigurationKeys, msgprovider.Status)),
+			im.Returning("provider_id", "provider_name", "short_name", "services", "configuration_key", "status_cd"),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.MsgProvider], &msgProvider1)
 		if err != nil {
 			log.Error(ctx, "Error executing insert query in CreateMsgProvider repo function:  %s", err.Error())
@@ -80,12 +83,14 @@ func (pr *ProviderRepository) ListProvidersTx(gctx *gin.Context) ([]domain.MsgPr
 	var listProviders []domain.MsgProvider
 
 	TxDB := pr.Db.WithTx(ctx, func(tx pgx.Tx) error {
-		query := dblib.Psql.Select("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd", "STRING_AGG(mr.request_type, ', ') AS services").
-			From("msg_provider mp").
-			Join("LATERAL unnest(string_to_array(mp.services, ',')) AS rt(rt_value) ON true").
-			Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code").
-			GroupBy("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd").
-			OrderBy("mp.provider_id")
+		query := psql.Select(
+			sm.Columns("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd", "STRING_AGG(mr.request_type, ', ') AS services"),
+			sm.From("msg_provider mp"),
+			sm.Join("LATERAL unnest(string_to_array(mp.services, ',')) AS rt(rt_value) ON true"),
+			sm.Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code"),
+			sm.GroupBy("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd"),
+			sm.OrderBy("mp.provider_id"),
+		)
 
 		err := dblib.TxRows(ctx, tx, query, pgx.RowToStructByNameLax[domain.MsgProvider], &listProviders)
 		if err != nil {
@@ -106,12 +111,14 @@ func (pr *ProviderRepository) ListProvidersOld(gctx *gin.Context) ([]domain.MsgP
 	ctx, cancel := context.WithTimeout(gctx.Request.Context(), pr.Cfg.GetDuration("db.querytimeoutmed"))
 	defer cancel()
 
-	query := dblib.Psql.Select("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd", "STRING_AGG(mr.request_type, ', ') AS services").
-		From("msg_provider mp").
-		Join("LATERAL unnest(string_to_array(mp.services, ',')) AS rt(rt_value) ON true").
-		Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code").
-		GroupBy("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd").
-		OrderBy("mp.provider_id")
+	query := psql.Select(
+		sm.Columns("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd", "STRING_AGG(mr.request_type, ', ') AS services"),
+		sm.From("msg_provider mp"),
+		sm.Join("LATERAL unnest(string_to_array(mp.services, ',')) AS rt(rt_value) ON true"),
+		sm.Join("msg_request_type mr ON rt.rt_value::integer = mr.request_code"),
+		sm.GroupBy("mp.provider_id", "mp.provider_name", "mp.short_name", "mp.status_cd"),
+		sm.OrderBy("mp.provider_id"),
+	)
 	return dblib.SelectRows(ctx, pr.Db, query, pgx.RowToStructByNameLax[domain.MsgProvider])
 }
 */

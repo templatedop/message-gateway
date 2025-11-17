@@ -192,3 +192,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/stephenafamo/bob => github.com/templatedop/bob v0.0.0-20251016212905-96da65fd88a5

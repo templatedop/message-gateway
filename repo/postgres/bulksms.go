@@ -30,9 +30,12 @@ func (cr *MgApplicationRepository) InitiateBulkSMSRepo(gctx *gin.Context, mbulk 
 	var Template_Id, Sender_Id, Entity_Id, Message_Type string
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Check if data already exists
-		query1 := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_template").
-			Where(squirrel.And{squirrel.Eq{"template_local_id": mbulk.TemplateName}, squirrel.Expr("? = ANY(string_to_array(application_id, ','))", mbulk.ApplicationID)})
+		query1 := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_template"),
+			sm.Where(psql.Quote("template_local_id").EQ(psql.Arg(mbulk.TemplateName))),
+			sm.Where(psql.Raw("? = ANY(string_to_array(application_id, ','))", mbulk.ApplicationID)),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query1, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error checking whether a msg_template exists for the given template_name and application_id in InitiateBulkSMS repo function:  %s", err.Error())
@@ -41,9 +44,11 @@ func (cr *MgApplicationRepository) InitiateBulkSMSRepo(gctx *gin.Context, mbulk 
 		if Counter.Count == 0 {
 			return errors.New("application and template are not mapped, refer maintain template")
 		}
-		query2 := dblib.Psql.Select("template_id,entity_id,sender_id,message_type").
-			From("msg_template").
-			Where("template_local_id=?", mbulk.TemplateName)
+		query2 := psql.Select(
+			sm.Columns("template_id", "entity_id", "sender_id", "message_type"),
+			sm.From("msg_template"),
+			sm.Where(psql.Quote("template_local_id").EQ(psql.Arg(mbulk.TemplateName))),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query2, pgx.RowToStructByNameLax[domain.InitiateBulkSMS], &mbulk1)
 		if err != nil {
 			log.Error(ctx, "Error executing query in InitiateBulkSMS while collecting template_id, entity_id,sender_id and message_type: ", err)
@@ -63,10 +68,11 @@ func (cr *MgApplicationRepository) InitiateBulkSMSRepo(gctx *gin.Context, mbulk 
 			}
 			mobileNumbers = append(mobileNumbers, num)
 		}
-		query3 := dblib.Psql.Insert("msg_bulk_file").
-			Columns("application_id", "template_name", "template_id", "entity_id", "sender_id", "message_type", "mobile_number", "test_msg", "is_verified").
-			Values(mbulk.ApplicationID, mbulk.TemplateName, mbulk1.TemplateID, mbulk1.EntityID, mbulk1.SenderID, mbulk1.MessageType, mobileNumbers, mbulk.TestMessage, false).
-			Suffix("RETURNING reference_id")
+		query3 := psql.Insert(
+			im.Into("msg_bulk_file", "application_id", "template_name", "template_id", "entity_id", "sender_id", "message_type", "mobile_number", "test_msg", "is_verified"),
+			im.Values(psql.Arg(mbulk.ApplicationID, mbulk.TemplateName, mbulk1.TemplateID, mbulk1.EntityID, mbulk1.SenderID, mbulk1.MessageType, mobileNumbers, mbulk.TestMessage, false)),
+			im.Returning("reference_id"),
+		)
 		err = dblib.TxReturnRow(ctx, tx, query3, pgx.RowToStructByNameLax[domain.InitiateBulkSMS], &mbulk1)
 		if err != nil {
 			log.Error(ctx, "Error executing insert query in InitiateBulkSMS repo function:  %s", err.Error())
@@ -88,9 +94,12 @@ func (cr *MgApplicationRepository) ValidateTestSMSRepo(gctx *gin.Context, mbulk 
 
 	var Counter domain.Counter
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
-		query := dblib.Psql.Select("COUNT(1) as count").
-			From("msg_bulk_file").
-			Where(squirrel.And{squirrel.Eq{"reference_id": mbulk.ReferenceID}, squirrel.Like{"test_msg": "%" + mbulk.TestString + "%"}})
+		query := psql.Select(
+			sm.Columns("COUNT(1) as count"),
+			sm.From("msg_bulk_file"),
+			sm.Where(psql.Quote("reference_id").EQ(psql.Arg(mbulk.ReferenceID))),
+			sm.Where(psql.Quote("test_msg").Like(psql.Arg("%"+mbulk.TestString+"%"))),
+		)
 		err := dblib.TxReturnRow(ctx, tx, query, pgx.RowToStructByNameLax[domain.Counter], &Counter)
 		if err != nil {
 			log.Error(ctx, "Error executing query in ValidateTestSMS repo function:  %s", err.Error())
@@ -118,19 +127,23 @@ func (cr *MgApplicationRepository) GetTemplateDetails(gctx *gin.Context, msgtemp
 	var listTemplates []domain.GetTemplateformatbyID
 
 	// Start building the query
-	query := dblib.Psql.Select("template_local_id", "template_name", "template_format", "template_id", "entity_id", "sender_id", "message_type").
-		From("msg_template")
+	mods := []bob.Mod[*psql.SelectQuery]{
+		sm.Columns("template_local_id", "template_name", "template_format", "template_id", "entity_id", "sender_id", "message_type"),
+		sm.From("msg_template"),
+	}
 
 	// Add conditions using multiple Where clauses
 	if msgtemplate.TemplateLocalID != 0 {
-		query = query.Where(squirrel.Eq{"template_local_id": msgtemplate.TemplateLocalID})
+		mods = append(mods, sm.Where(psql.Quote("template_local_id").EQ(psql.Arg(msgtemplate.TemplateLocalID))))
 	}
 	if msgtemplate.ApplicationID != "" {
-		query = query.Where(squirrel.Eq{"application_id": msgtemplate.ApplicationID})
+		mods = append(mods, sm.Where(psql.Quote("application_id").EQ(psql.Arg(msgtemplate.ApplicationID))))
 	}
 	if msgtemplate.TemplateFormat != "" {
-		query = query.Where(squirrel.Eq{"template_format": msgtemplate.TemplateFormat})
+		mods = append(mods, sm.Where(psql.Quote("template_format").EQ(psql.Arg(msgtemplate.TemplateFormat))))
 	}
+
+	query := psql.Select(mods...)
 
 	// Execute the transaction
 	TxDB := cr.Db.WithTx(ctx, func(tx pgx.Tx) error {
