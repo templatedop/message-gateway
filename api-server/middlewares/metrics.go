@@ -3,6 +3,7 @@ package middlewares
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,6 +34,12 @@ var DefaultRequestMetricsMiddlewareConfig = RequestMetricsMiddlewareConfig{
 	NormalizeResponseStatus: true,
 }
 
+var (
+	metricsOnce          sync.Once
+	httpRequestsCounter  *prometheus.CounterVec
+	httpRequestsDuration *prometheus.HistogramVec
+)
+
 func RequestMetricsMiddleware() gin.HandlerFunc {
 	return RequestMetricsMiddlewareWithConfig(DefaultRequestMetricsMiddlewareConfig)
 }
@@ -58,35 +65,38 @@ func RequestMetricsMiddlewareWithConfig(config RequestMetricsMiddlewareConfig) g
 		config.Buckets = DefaultRequestMetricsMiddlewareConfig.Buckets
 	}
 
-	httpRequestsCounter := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: config.Namespace,
-			Subsystem: config.Subsystem,
-			Name:      HttpServerMetricsRequestsCount,
-			Help:      "Number of processed HTTP requests",
-		},
-		[]string{
-			"status",
-			"method",
-			"path",
-		},
-	)
+	// Register metrics only once using sync.Once to avoid panic on multiple middleware usage
+	metricsOnce.Do(func() {
+		httpRequestsCounter = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: config.Namespace,
+				Subsystem: config.Subsystem,
+				Name:      HttpServerMetricsRequestsCount,
+				Help:      "Number of processed HTTP requests",
+			},
+			[]string{
+				"status",
+				"method",
+				"path",
+			},
+		)
 
-	httpRequestsDuration := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace: config.Namespace,
-			Subsystem: config.Subsystem,
-			Name:      HttpServerMetricsRequestsDuration,
-			Help:      "Time spent processing HTTP requests",
-			Buckets:   config.Buckets,
-		},
-		[]string{
-			"method",
-			"path",
-		},
-	)
+		httpRequestsDuration = prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: config.Namespace,
+				Subsystem: config.Subsystem,
+				Name:      HttpServerMetricsRequestsDuration,
+				Help:      "Time spent processing HTTP requests",
+				Buckets:   config.Buckets,
+			},
+			[]string{
+				"method",
+				"path",
+			},
+		)
 
-	config.Registry.MustRegister(httpRequestsCounter, httpRequestsDuration)
+		config.Registry.MustRegister(httpRequestsCounter, httpRequestsDuration)
+	})
 
 	return func(c *gin.Context) {
 		if config.Skipper(c) {

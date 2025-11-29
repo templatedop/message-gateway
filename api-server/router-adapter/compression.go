@@ -18,11 +18,20 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-// gzipWriterPool pools gzip writers for reuse
-var gzipWriterPool = sync.Pool{
-	New: func() interface{} {
-		return gzip.NewWriter(nil)
-	},
+// gzipWriterPools - one pool per compression level for optimal performance
+var gzipWriterPools [10]sync.Pool
+
+func init() {
+	// Initialize pools for each compression level (0-9)
+	for i := 0; i < 10; i++ {
+		level := i
+		gzipWriterPools[i] = sync.Pool{
+			New: func() interface{} {
+				w, _ := gzip.NewWriterLevel(nil, level)
+				return w
+			},
+		}
+	}
 }
 
 // GzipMiddleware returns a framework-agnostic gzip compression middleware
@@ -33,24 +42,18 @@ func GzipMiddleware(level int) MiddlewareFunc {
 			return next()
 		}
 
-		// Get gzip writer from pool
-		gz := gzipWriterPool.Get().(*gzip.Writer)
-		defer gzipWriterPool.Put(gz)
-
-		// Reset writer with new level
-		if level >= gzip.NoCompression && level <= gzip.BestCompression {
-			gz.Reset(ctx.Response)
-			// Note: We can't change the level of an existing writer easily
-			// So we create a new one with the desired level
-			var err error
-			gz, err = gzip.NewWriterLevel(ctx.Response, level)
-			if err != nil {
-				return next() // Fall back to no compression
-			}
-		} else {
-			gz.Reset(ctx.Response)
+		// Validate and normalize compression level
+		if level < gzip.NoCompression || level > gzip.BestCompression {
+			level = gzip.DefaultCompression
 		}
-		defer gz.Close()
+
+		// Get writer from correct pool for this compression level
+		gz := gzipWriterPools[level].Get().(*gzip.Writer)
+		gz.Reset(ctx.Response)
+		defer func() {
+			gz.Close()
+			gzipWriterPools[level].Put(gz)
+		}()
 
 		// Set response headers
 		ctx.SetHeader("Content-Encoding", "gzip")

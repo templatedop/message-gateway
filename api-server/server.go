@@ -74,19 +74,23 @@ func (s *Router) handleConnState(conn net.Conn, state http.ConnState) {
 
 	switch state {
 	case http.StateNew:
-		currentConns := atomic.LoadInt64(&activeConnections)
-		if currentConns >= s.MaxConnections {
-			// Increment rejected connections metric
+		// Atomically increment first, then check - prevents TOCTOU race
+		newCount := atomic.AddInt64(&activeConnections, 1)
+
+		if newCount > s.MaxConnections {
+			// Over limit - decrement back and reject
+			atomic.AddInt64(&activeConnections, -1)
 			IncRejectedConnections()
 
 			log.GetBaseLoggerInstance().ToZerolog().Warn().
-				Int64("activeConnections", currentConns).
+				Int64("activeConnections", newCount-1).
 				Int64("maxConnections", s.MaxConnections).
 				Msg("Max connections reached - connection rejected")
 			conn.Close()
 			return
 		}
-		atomic.AddInt64(&activeConnections, 1)
+
+		// Under limit - connection accepted
 		IncActiveConnections()
 
 	case http.StateClosed, http.StateHijacked:
