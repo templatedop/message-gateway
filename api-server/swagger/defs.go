@@ -65,7 +65,6 @@ func buildModelDefinition(defs m, t reflect.Type, isReq bool) {
 	}
 
 	// Check type cache - skip if already processed
-	typeName := getNameFromType(t)
 	if _, exists := processedTypes.Load(t); exists {
 		return
 	}
