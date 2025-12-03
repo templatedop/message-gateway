@@ -8,8 +8,6 @@ import (
 
 //var F *os.File
 
-var newFill float64
-
 type paddedUint64 struct {
 	value uint64
 	_     [56]byte
@@ -35,33 +33,45 @@ func NewLeakyBucket(leakRate, burstCapacity float64) *LeakyBucket {
 }
 
 func (b *LeakyBucket) Allow() bool {
-	now := time.Now()
-	nowNano := uint64(now.UnixNano())
+	const maxRetries = 100 // Prevent infinite loop under extreme contention
 
-	for {
+	for retries := 0; retries < maxRetries; retries++ {
+		// Single time snapshot to avoid time skew
+		now := time.Now()
+		nowNano := uint64(now.UnixNano())
+
 		lastFillBits := atomic.LoadUint64(&b.currentFill.value)
 		lastFill := math.Float64frombits(lastFillBits)
 
-		lastTime := time.Unix(0, int64(atomic.LoadUint64(&b.lastLeakTime.value)))
-		now := time.Now()
+		lastTimeNano := atomic.LoadUint64(&b.lastLeakTime.value)
+		lastTime := time.Unix(0, int64(lastTimeNano))
+
+		// Calculate leak using the single time snapshot
 		elapsed := now.Sub(lastTime).Seconds()
 		leaked := elapsed * b.leakRate
 
-		newFill = math.Max(0, lastFill-leaked)
+		// Use local variable instead of global
+		newFill := math.Max(0, lastFill-leaked)
 
 		if newFill < b.burstCapacity {
 			newFill++
-			if atomic.CompareAndSwapUint64(&b.currentFill.value, lastFillBits, math.Float64bits(newFill)) {
+			newFillBits := math.Float64bits(newFill)
+
+			if atomic.CompareAndSwapUint64(&b.currentFill.value, lastFillBits, newFillBits) {
 				atomic.StoreUint64(&b.lastLeakTime.value, nowNano)
 				AllowedTotal.Inc()
-
 				return true
 			}
+			// CAS failed, retry
 		} else {
 			RejectedTotal.Inc()
 			return false
 		}
 	}
+
+	// Max retries exceeded - fail safe to reject
+	RejectedTotal.Inc()
+	return false
 }
 
 func (b *LeakyBucket) PeekFill() float64 {

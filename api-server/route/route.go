@@ -56,11 +56,10 @@ func (c *Context) Value(key any) any {
 func (c *Context) fromGinCtx(ginCtx *gin.Context) {
 	cc := ginCtx.Request.Context()
 
-	// Use the existing request context which may already have timeout, tracing, etc.
-	// from middlewares. Don't create a new timeout context here to avoid conflicts.
-	// If timeout middleware is enabled, it already set up the timeout.
-	// We just need a cancel context to allow early cancellation if needed.
-	ctx, cancel := context.WithCancel(cc)
+	// Add 50-second timeout to prevent handlers from running too long
+	// This provides graceful timeout before HTTP server's hard limit (90s)
+	// Handlers should check context.Done() to respect this timeout
+	ctx, cancel := context.WithTimeout(cc, 50*time.Second)
 	c.Ctx = ctx
 	c.cancel = cancel
 

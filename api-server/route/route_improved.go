@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -206,9 +207,9 @@ func setServerTimingHeader(c *gin.Context, startTime time.Time) {
 		sb.WriteString(", ")
 	}
 
-	// Add deserialization timing
+	// Add deserialization timing (using strconv to avoid allocation)
 	sb.WriteString("deserialize;dur=")
-	sb.WriteString(fmt.Sprintf("%d", duration.Milliseconds()))
+	sb.WriteString(strconv.FormatInt(duration.Milliseconds(), 10))
 
 	c.Writer.Header().Set("Server-Timing", sb.String())
 }

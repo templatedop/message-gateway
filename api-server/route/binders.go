@@ -22,16 +22,32 @@ const (
 )
 
 // bindJSON binds JSON request body to the request struct
+// Uses buffer pool for efficient memory usage
 func bindJSON[Req any](c *gin.Context, ctx *Context, req *Req) error {
-	if err := c.ShouldBindJSON(req); err != nil {
+	// Use pooled buffer for reading body
+	buf := getBuffer()
+	defer putBuffer(buf)
+
+	// Read body into pooled buffer
+	_, err := io.Copy(buf, c.Request.Body)
+	if err != nil {
+		log.Error(ctx.Ctx, "Failed to read JSON request body: %v", err)
+		apierrors.HandleBindingError(c, err)
+		return err
+	}
+
+	// Use custom JSON binding (goccy/go-json) for better performance
+	if err := binding.JSON.BindBody(buf.Bytes(), req); err != nil {
 		log.Error(ctx.Ctx, "JSON bind failed: %v", err)
 		apierrors.HandleBindingError(c, err)
 		return err
 	}
+
 	return nil
 }
 
 // bindXML binds XML request body to the request struct
+// Uses buffer pool for efficient memory usage
 func bindXML[Req any](c *gin.Context, ctx *Context, req *Req) error {
 	// Handle special case for *bytes.Buffer
 	if reqbuf, ok := any(req).(*bytes.Buffer); ok {
@@ -45,11 +61,25 @@ func bindXML[Req any](c *gin.Context, ctx *Context, req *Req) error {
 		return nil
 	}
 
-	if err := c.ShouldBindXML(req); err != nil {
+	// Use pooled buffer for reading body
+	buf := getBuffer()
+	defer putBuffer(buf)
+
+	// Read body into pooled buffer
+	_, err := io.Copy(buf, c.Request.Body)
+	if err != nil {
+		log.Error(ctx.Ctx, "Failed to read XML request body: %v", err)
+		apierrors.HandleBindingError(c, err)
+		return err
+	}
+
+	// Bind from buffer
+	if err := binding.XML.BindBody(buf.Bytes(), req); err != nil {
 		log.Error(ctx.Ctx, "XML bind failed: %v", err)
 		apierrors.HandleBindingError(c, err)
 		return err
 	}
+
 	return nil
 }
 

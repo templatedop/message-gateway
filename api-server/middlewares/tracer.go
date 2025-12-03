@@ -56,79 +56,46 @@ func RequestTracerMiddleware(servicename string, config RequestTracerMiddlewareC
 
 		ctx := c.Request.Context()
 
+		// Generate or extract request ID
 		requestID := c.GetHeader("Traceparent")
 		if requestID == "" {
 			requestID = uuid.New().String()
 		}
 
-		// Store in context
-		ctx = context.WithValue(c.Request.Context(), reqid.CtxRequestIdKey{}, requestID)
-		c.Request = c.Request.WithContext(ctx)
-		carrier := propagation.HeaderCarrier(c.Request.Header)
+		// Store request ID in context
+		ctx = context.WithValue(ctx, reqid.CtxRequestIdKey{}, requestID)
 
+		// Extract trace context from headers
+		carrier := propagation.HeaderCarrier(c.Request.Header)
 		ctx = config.TextMapPropagator.Extract(ctx, carrier)
 
+		// Inject trace context into response headers
 		responseHeaders := propagation.HeaderCarrier(c.Writer.Header())
-		//responseHeaders.Set("x-access-token", token)
 		config.TextMapPropagator.Inject(ctx, responseHeaders)
 
-		opts := []oteltrace.SpanStartOption{
-
-			oteltrace.WithAttributes(httpconv.ServerRequest("", c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
-			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		}
-
+		// Build span name
 		spanName := c.FullPath()
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
 
-		var newSpanContext oteltrace.SpanContext
-		ctxTraceID := c.Request.Header.Get("X-Trace-ID")
-		var span oteltrace.Span
-
-		if ctxTraceID != "" {
-
-			tid, err := oteltrace.TraceIDFromHex(ctxTraceID)
-			if err != nil {
-
-			} else {
-				newSpanContext = oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
-					TraceID:    tid,
-					Remote:     true,
-					TraceFlags: oteltrace.FlagsSampled,
-				})
-				ctx = oteltrace.ContextWithRemoteSpanContext(ctx, newSpanContext)
-				ctx, span = tracer.Start(ctx, spanName, opts...)
-
-			}
-		} else {
-			// Start a new span without a specific TraceID
-			ctx, span = tracer.Start(ctx, spanName, opts...)
-			newSpanContext = span.SpanContext()
+		// Build span options
+		opts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(httpconv.ServerRequest("", c.Request)...),
+			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
+			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 
+		// Start span - single creation point
+		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
-		spanContext := span.SpanContext()
-		if ctxTraceID != "" {
-
-			tid, err := oteltrace.TraceIDFromHex(ctxTraceID)
-			if err != nil {
-
-			} else {
-				spanContext.WithTraceID(tid)
-				ctx = oteltrace.ContextWithRemoteSpanContext(ctx, spanContext)
-			}
-		}
-
-		traceID := spanContext.TraceID().String()
-
+		// Set trace ID headers
+		traceID := span.SpanContext().TraceID().String()
 		c.Set("trace_id", traceID)
-		c.Request.Header.Set("X-Trace-ID", traceID)
 		c.Header("X-Trace-ID", traceID)
 
+		// Update request context
 		c.Request = c.Request.WithContext(ctx)
 
 		c.Next()
