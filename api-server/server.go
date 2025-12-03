@@ -103,7 +103,8 @@ var ginserver *http.Server
 
 func (s *Router) RegisterRoutes() {
 	slc.ForEach(s.registries, func(r *registry) {
-		metas := slc.Map(r.routes, r.toMeta)
+		// Use cached metas to avoid duplicate computation with SwaggerDefs
+		metas := r.getMetas()
 
 		slc.ForEach(metas, func(m route.Meta) {
 			handlers := []gin.HandlerFunc{}

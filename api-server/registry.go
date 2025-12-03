@@ -3,6 +3,7 @@ package router
 import (
 	"net/url"
 	"strings"
+	"sync"
 
 	log "MgApplication/api-log"
 	"MgApplication/api-server/handler"
@@ -20,6 +21,10 @@ type registry struct {
 	name   string
 	mws    []gin.HandlerFunc
 	routes []route.Route
+
+	// Cached metas to avoid duplicate computation in both RegisterRoutes and SwaggerDefs
+	cachedMetas []route.Meta
+	metasOnce   sync.Once
 }
 
 func ParseControllers(cts ...handler.Handler) []*registry {
@@ -82,6 +87,14 @@ func (r *registry) toMeta(h route.Route) route.Meta {
 	return m
 }
 
+// getMetas returns cached metas, computing them only once
+func (r *registry) getMetas() []route.Meta {
+	r.metasOnce.Do(func() {
+		r.cachedMetas = slc.Map(r.routes, r.toMeta)
+	})
+	return r.cachedMetas
+}
+
 func GetSwaggerDefs(rs []*registry) []swagger.EndpointDef {
 	return slc.FlatMap(rs, func(r *registry) []swagger.EndpointDef {
 		return r.SwaggerDefs()
@@ -89,7 +102,8 @@ func GetSwaggerDefs(rs []*registry) []swagger.EndpointDef {
 }
 
 func (r *registry) SwaggerDefs() []swagger.EndpointDef {
-	metas := slc.Map(r.routes, r.toMeta)
+	// Use cached metas instead of recomputing
+	metas := r.getMetas()
 	d := slc.Map(metas, r.toSwagDefinition)
 
 	return d

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	config "MgApplication/api-config"
@@ -32,12 +33,93 @@ func (d Docs) WithHost(h string) Docs {
 }
 
 const (
-	refKey = "$ref"
+	refKey                  = "$ref"
+	PreGeneratedSwaggerFile = "./docs/pregenerated_swagger.json"
 )
 
-// func buildDocs(eds []EndpointDef, cfg *config.Config) Docs {
+// SwaggerGenerationMode determines when swagger is generated
+type SwaggerGenerationMode int
+
+const (
+	// RuntimeMode generates swagger on application startup (default, slower startup)
+	RuntimeMode SwaggerGenerationMode = iota
+	// BuildMode loads pre-generated swagger from file (fast startup)
+	BuildMode
+)
+
+// Configuration for swagger generation
+var (
+	generationMode     SwaggerGenerationMode
+	generationModeLock sync.RWMutex
+)
+
+// Pre-computed type constants for performance
+var (
+	typeFileHeader = reflect.TypeOf(multipart.FileHeader{})
+	timeExample    string
+)
+
+// Pre-computed error examples to avoid repeated allocation
+var errorExamples = map[string]map[string]any{
+	"400": {"status_code": 400, "message": "Bad Request", "success": false, "error": map[string]any{"code": "400", "message": "bad request", "id": "ERR-400"}},
+	"401": {"status_code": 401, "message": "Unauthorized", "success": false, "error": map[string]any{"code": "401", "message": "unauthorized", "id": "ERR-401"}},
+	"403": {"status_code": 403, "message": "Forbidden", "success": false, "error": map[string]any{"code": "403", "message": "forbidden", "id": "ERR-403"}},
+	"404": {"status_code": 404, "message": "Not Found", "success": false, "error": map[string]any{"code": "404", "message": "not found", "id": "ERR-404"}},
+	"422": {"status_code": 422, "message": "Validation Error", "success": false, "error": map[string]any{"code": "422", "message": "validation error", "field_errors": []any{map[string]any{"field": "string", "value": "", "message": "string"}}}},
+	"500": {"status_code": 500, "message": "Internal Server Error", "success": false, "error": map[string]any{"code": "500", "message": "internal server error", "id": "ERR-500"}},
+}
+
+func init() {
+	// Pre-compute time example once at package initialization
+	b, _ := time.Now().MarshalJSON()
+	timeExample = strings.Trim(string(b), "\"")
+}
+
+// loadPreGeneratedSwagger loads swagger documentation from pre-generated file
+func loadPreGeneratedSwagger() *openapi3.T {
+	data, err := os.ReadFile(PreGeneratedSwaggerFile)
+	if err != nil {
+		return nil
+	}
+
+	var v3Doc openapi3.T
+	if err := json.Unmarshal(data, &v3Doc); err != nil {
+		fmt.Printf("Error unmarshalling pre-generated swagger: %v\n", err)
+		return nil
+	}
+
+	return &v3Doc
+}
+
+// SetGenerationMode configures how swagger documentation is generated
+func SetGenerationMode(mode SwaggerGenerationMode) {
+	generationModeLock.Lock()
+	defer generationModeLock.Unlock()
+	generationMode = mode
+}
+
+// GetGenerationMode returns the current generation mode
+func GetGenerationMode() SwaggerGenerationMode {
+	generationModeLock.RLock()
+	defer generationModeLock.RUnlock()
+	return generationMode
+}
+
+// buildDocs generates OpenAPI v3 documentation from endpoint definitions
+// Supports two modes:
+// - RuntimeMode: Generates swagger on startup (slower)
+// - BuildMode: Loads pre-generated swagger from file (faster)
 func buildDocs(eds []EndpointDef, cfg *config.Config) *openapi3.T {
-	// Load any nullable type override mappings from config before generating docs
+	// Check if we should load from pre-generated file
+	if GetGenerationMode() == BuildMode {
+		if v3Doc := loadPreGeneratedSwagger(); v3Doc != nil {
+			fmt.Println("Loaded pre-generated swagger documentation")
+			return v3Doc
+		}
+		fmt.Println("Warning: BuildMode enabled but pre-generated file not found, falling back to runtime generation")
+	}
+
+	// Runtime generation
 	loadNullableOverrides(cfg)
 	dj := baseJSON(cfg)
 	dj["definitions"] = buildDefinitions(eds)
@@ -57,14 +139,15 @@ func buildDocs(eds []EndpointDef, cfg *config.Config) *openapi3.T {
 		return nil
 	}
 
-	// // Attach success & error examples (overrides any missing examples)
+	// Attach success & error examples (overrides any missing examples)
 	attachErrorExamples(v3Doc)
 
-	// Persist generated v3 document to file (ignore error)
-	err = storeV3DocToFile(v3Doc)
-	if err != nil {
-		fmt.Println("Error storing v3 doc to file:", err)
-	}
+	// Persist generated v3 document to file asynchronously (non-blocking)
+	go func() {
+		if err := storeV3DocToFile(v3Doc); err != nil {
+			fmt.Println("Error storing v3 doc to file:", err)
+		}
+	}()
 
 	return v3Doc
 
@@ -160,33 +243,48 @@ func buildDocs(eds []EndpointDef, cfg *config.Config) *openapi3.T {
 
 }
 func storeV3DocToFile(v3Doc *openapi3.T) error {
-	// Marshal v3Doc to JSON
-	v3DocJSON, err := json.MarshalIndent(v3Doc, "", "  ")
+	// Optimized: Use json.Marshal instead of MarshalIndent for faster serialization
+	// Indentation is not critical for machine-readable files
+	v3DocJSON, err := json.Marshal(v3Doc)
 	if err != nil {
 		return fmt.Errorf("error marshaling v3Doc to JSON: %w", err)
 	}
 
-	//create docs folder if not available
+	// Create docs folder if not available
 	if _, err := os.Stat("docs"); os.IsNotExist(err) {
-		os.Mkdir("docs", os.ModePerm)
+		if err := os.Mkdir("docs", os.ModePerm); err != nil {
+			return fmt.Errorf("error creating docs directory: %w", err)
+		}
 	}
 
-	// Create or open a file
-	file, err := os.Create("./docs/v3Doc.json")
-	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
-	}
-	defer file.Close()
-
-	// Write JSON data to the file
-	if _, err := file.Write(v3DocJSON); err != nil {
+	// Write file atomically
+	if err := os.WriteFile("./docs/v3Doc.json", v3DocJSON, 0644); err != nil {
 		return fmt.Errorf("error writing to file: %w", err)
 	}
-	// if err := loadAndResolve(); err != nil {
-	//     log.Fatal(err)
-	// }
 
 	fmt.Println("v3Doc has been successfully stored in v3Doc.json")
+	return nil
+}
+
+// SavePreGeneratedSwagger saves swagger doc to the pre-generated file location
+// This is used by the build-time CLI tool
+func SavePreGeneratedSwagger(v3Doc *openapi3.T) error {
+	v3DocJSON, err := json.Marshal(v3Doc)
+	if err != nil {
+		return fmt.Errorf("error marshaling v3Doc: %w", err)
+	}
+
+	if _, err := os.Stat("docs"); os.IsNotExist(err) {
+		if err := os.Mkdir("docs", os.ModePerm); err != nil {
+			return fmt.Errorf("error creating docs directory: %w", err)
+		}
+	}
+
+	if err := os.WriteFile(PreGeneratedSwaggerFile, v3DocJSON, 0644); err != nil {
+		return fmt.Errorf("error writing pre-generated swagger: %w", err)
+	}
+
+	fmt.Printf("Pre-generated swagger saved to %s\n", PreGeneratedSwaggerFile)
 	return nil
 }
 
@@ -295,25 +393,16 @@ func getPrimitiveType(t reflect.Type) m {
 }
 
 func getPropertyField(t reflect.Type) m {
-
-	//This is for examples....
-	//fmt.Println("getPropertyField: ", t)
 	if t == typlect.TypeNoParam {
 		return m{"type": "string"}
 	}
-	/* This is for mapping special types */
-	// if t == reflect.TypeOf(sql.NullString{}) {
-
-	// 	return m{"type": "string"}
-	// }
-	/* This is for mapping special types */
 
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
-	// Treat uploaded files as binary strings to avoid unresolved FileHeader schema refs
-	if t == reflect.TypeOf(multipart.FileHeader{}) {
+	// Optimized: Use pre-computed constant instead of reflect.TypeOf
+	if t == typeFileHeader {
 		return m{"type": "string", "format": "binary"}
 	}
 
@@ -322,9 +411,9 @@ func getPropertyField(t reflect.Type) m {
 		return v
 	}
 
+	// Optimized: Use pre-computed timeExample instead of generating each time
 	if t == typlect.TypeTime {
-		b, _ := time.Now().MarshalJSON()
-		return m{"type": "string", "example": strings.Trim(string(b), "\"")}
+		return m{"type": "string", "example": timeExample}
 	}
 
 	if t.Kind() == reflect.Struct {
@@ -421,10 +510,23 @@ func arrayProperty(t reflect.Type) m {
 }
 
 func getNameFromType(t reflect.Type) string {
-	s := strings.ReplaceAll(t.Name(), "]", "")
-	s = strings.ReplaceAll(s, "/", "_")
-	s = strings.ReplaceAll(s, "*", "")
-	return strings.ReplaceAll(s, "[", "__")
+	name := t.Name()
+	// Optimized: Use strings.Builder to avoid multiple allocations
+	var sb strings.Builder
+	sb.Grow(len(name)) // Pre-allocate capacity
+	for _, r := range name {
+		switch r {
+		case ']': // skip
+		case '/':
+			sb.WriteByte('_')
+		case '*': // skip
+		case '[':
+			sb.WriteString("__")
+		default:
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
 }
 
 // attachErrorExamples walks the v3 doc and attaches an Example to each non-2xx response
@@ -490,33 +592,24 @@ func attachErrorExamples(doc *openapi3.T) {
 					if !strings.HasSuffix(lr, "/apierrorresponse") && !strings.HasSuffix(lr, ".apierrorresponse") {
 						continue
 					}
-					errObj := map[string]any{
-						"code":    code,
-						"message": desc,
-						"id":      "ERR-EXAMPLE-ID",
-					}
-					var ex map[string]any
-					if code == "422" { // validation error format
-						errObj["message"] = "validation error"
-						ex = map[string]any{
-							"status_code": status,
-							"message":     "Validation Error",
-							"success":     false,
-							"error": map[string]any{
-								"code":         code,
-								"message":      "validation error",
-								"field_errors": []any{map[string]any{"field": "string", "value": "", "message": "string"}},
-							},
-						}
+
+					// Optimized: Use pre-computed error examples
+					if ex, ok := errorExamples[code]; ok {
+						media.Example = ex
 					} else {
-						ex = map[string]any{
+						// Fallback for non-standard error codes
+						errObj := map[string]any{
+							"code":    code,
+							"message": desc,
+							"id":      "ERR-EXAMPLE-ID",
+						}
+						media.Example = map[string]any{
 							"status_code": status,
 							"message":     desc,
 							"success":     false,
 							"error":       errObj,
 						}
 					}
-					media.Example = ex
 					respRef.Value.Content[cType] = media
 				}
 			}

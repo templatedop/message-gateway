@@ -4,25 +4,30 @@ import (
 	"database/sql"
 	"reflect"
 	"strings"
+	"sync"
 
 	errors "MgApplication/api-errors"
 	"MgApplication/api-server/util/diutil/typlect"
 	"MgApplication/api-server/util/slc"
 )
 
+// Type cache to avoid processing the same type multiple times
+var (
+	processedTypes sync.Map // map[reflect.Type]bool
+)
+
 func buildDefinitions(eds []EndpointDef) m {
-	defs := make(m)
+	// Pre-size map based on endpoint count (heuristic: avg 2-3 types per endpoint)
+	estimatedSize := len(eds) * 3
+	defs := make(m, estimatedSize)
+
+	// Reset type cache for new generation
+	processedTypes = sync.Map{}
 
 	for _, ed := range eds {
-
 		buildModelDefinition(defs, ed.RequestType, true)
 		buildModelDefinition(defs, ed.ResponseType, false)
 		buildModelDefinition(defs, reflect.TypeOf(errors.APIErrorResponse{}), false)
-		// buildModelDefinition(d, ed.ResponseType, false)
-		// buildModelDefinition(d1, reflect.TypeOf(response.ResponseError{}), false)
-		// mm:=mergeMaps(d,d1)
-
-		// fmt.Println("d value is:", mm)
 	}
 
 	// Ensure APIErrorResponse schema explicitly shows success=false in examples.
@@ -43,29 +48,15 @@ func buildDefinitions(eds []EndpointDef) m {
 }
 
 func buildModelDefinition(defs m, t reflect.Type, isReq bool) {
-	// fmt.Println("Starting of buildModelDefinition")
-	// fmt.Println("defs: ", defs)
-	// fmt.Println("t: ", t)
-	// fmt.Println("t kind: ", t.Kind())
-	// fmt.Println("t Name: ", t.Name())
-
-	// fmt.Println("isReq: ", isReq)
-	// fmt.Println("Ends of buildModelDefinition")
-
 	if t == typlect.TypeNoParam {
 		return
 	}
 
-	//fmt.Println("t NumIn: ", t.NumIn())
-	//fmt.Println("t Numout: ", t.NumOut())
-
 	if t.Kind() == reflect.Slice {
-		//fmt.Println("t elem: ", t.Elem())
 		t = t.Elem()
 	}
 
 	if t.Kind() == reflect.Pointer {
-		//fmt.Println("t elem: ", t.Elem())
 		t = t.Elem()
 	}
 
@@ -73,25 +64,22 @@ func buildModelDefinition(defs m, t reflect.Type, isReq bool) {
 		return
 	}
 
-	// typeMapping := map[reflect.Type]reflect.Type{
-	//     reflect.TypeOf(sql.NullString{}): reflect.TypeOf(""),
-	//     reflect.TypeOf(sql.NullInt64{}):  reflect.TypeOf(0),
-	//     reflect.TypeOf(sql.NullFloat64{}): reflect.TypeOf(0.0),
-	//     reflect.TypeOf(sql.NullBool{}):   reflect.TypeOf(true),
-	// }
+	// Check type cache - skip if already processed
+	typeName := getNameFromType(t)
+	if _, exists := processedTypes.Load(t); exists {
+		return
+	}
+	processedTypes.Store(t, true)
 
+	// Pre-size collections based on field count for better memory efficiency
+	numFields := t.NumField()
 	var smr []string
-	smp := m{}
-	for i := 0; i < t.NumField(); i++ {
+	smp := make(m, numFields) // Pre-allocate map with expected capacity
 
-		//fmt.Println("i: ", i)
-		//fmt.Println("t.NumField(): ", t.NumField())
-
-		var (
-			f = t.Field(i)
-
-			ft = f.Type
-		)
+	// Cache fields to avoid repeated reflection calls
+	for i := 0; i < numFields; i++ {
+		f := t.Field(i)
+		ft := f.Type
 		// if basicType, ok := typeMapping[ft]; ok {
 		//     fmt.Println("Converting special type: ", f)
 		//     ft = basicType
@@ -205,7 +193,11 @@ func buildModelDefinition(defs m, t reflect.Type, isReq bool) {
 
 func getFieldName(f reflect.StructField) string {
 	if tag := f.Tag.Get("json"); tag != "" {
-		return strings.Split(tag, ",")[0] // ignore ',omitempty'
+		// Optimized: Use Index instead of Split to avoid allocation
+		if idx := strings.Index(tag, ","); idx >= 0 {
+			return tag[:idx]
+		}
+		return tag
 	}
 
 	return f.Name

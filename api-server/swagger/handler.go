@@ -5,12 +5,19 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"MgApplication/api-server/common"
 	"MgApplication/api-server/swagger/files"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+)
+
+// Cache for swagger JSON responses per host to avoid repeated marshaling
+var (
+	swaggerCache     sync.Map // map[string][]byte (host -> marshaled JSON)
+	swaggerCacheLock sync.RWMutex
 )
 
 func ginWrapper(v3Doc *openapi3.T) common.GinAppWrapper {
@@ -85,11 +92,34 @@ func attachHostToV3Doc(doc *openapi3.T, host string) *openapi3.T {
 }
 
 // Middleware function conversion for serving Swagger files
+// Optimized with caching to avoid repeated JSON marshaling
 func newMiddleware(v3Doc *openapi3.T) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.URL.Path == "/swagger/docs.json" || c.Request.URL.Path == "/swagger/docs.json/" {
-			v3Doc = attachHostToV3Doc(v3Doc, c.Request.Host)
-			c.JSON(http.StatusOK, v3Doc)
+			host := c.Request.Host
+
+			// Check cache first
+			if cached, ok := swaggerCache.Load(host); ok {
+				c.Data(http.StatusOK, "application/json", cached.([]byte))
+				return
+			}
+
+			// Cache miss - generate and cache
+			docCopy := *v3Doc // Shallow copy to avoid mutating original
+			docCopy.Servers = []*openapi3.Server{
+				{URL: fmt.Sprintf("http://%s", host)},
+			}
+
+			data, err := json.Marshal(&docCopy)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal swagger"})
+				return
+			}
+
+			// Store in cache
+			swaggerCache.Store(host, data)
+
+			c.Data(http.StatusOK, "application/json", data)
 			return
 		}
 

@@ -2,7 +2,7 @@ package swagger
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -20,7 +20,7 @@ func generatejson(v3 *openapi3.T) {
 	defer file.Close()
 
 	// Read the file content
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
@@ -43,7 +43,7 @@ func generatejson(v3 *openapi3.T) {
 		jsonParsed.DeleteP(nullStringPath)
 	}
 
-	err = ioutil.WriteFile("./docs/resolved_swagger.json", []byte(jsonParsed.StringIndent("", "  ")), 0644)
+	err = os.WriteFile("./docs/resolved_swagger.json", []byte(jsonParsed.StringIndent("", "  ")), 0644)
 	if err != nil {
 		log.Fatalf("Failed to write file: %v", err)
 	}
