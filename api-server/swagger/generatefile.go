@@ -3,7 +3,6 @@ package swagger
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -11,24 +10,54 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func generatejson(v3 *openapi3.T) {
+	// This function is optional post-processing that creates resolved_swagger.json
+	// It's safe to skip if v3Doc.json doesn't exist yet
+
+	// Check if v3Doc.json exists (it's created asynchronously by buildDocs)
+	if _, err := os.Stat("./docs/v3Doc.json"); os.IsNotExist(err) {
+		// File doesn't exist yet - this is expected on first run or in build mode
+		// The async write in buildDocs will create it later
+		fmt.Println("Swagger post-processing skipped: v3Doc.json not yet available")
+		return
+	}
+
 	// Load the Swagger JSON file
 	file, err := os.Open("./docs/v3Doc.json")
 	if err != nil {
-		log.Fatalf("Failed to open file: %v", err)
+		// Non-fatal: log and return instead of crashing
+		fmt.Printf("Warning: Failed to open v3Doc.json for post-processing: %v\n", err)
+		return
 	}
 	defer file.Close()
 
 	// Read the file content
 	data, err := io.ReadAll(file)
 	if err != nil {
-		log.Fatalf("Failed to read file: %v", err)
+		fmt.Printf("Warning: Failed to read v3Doc.json: %v\n", err)
+		return
+	}
+
+	// Validate that we have content
+	if len(data) == 0 {
+		fmt.Println("Warning: v3Doc.json is empty, skipping post-processing")
+		return
 	}
 
 	// Parse the JSON into a Gabs container
 	jsonParsed, err := gabs.ParseJSON(data)
 	if err != nil {
-		log.Fatalf("Failed to parse JSON: %v", err)
+		fmt.Printf("Warning: Failed to parse v3Doc.json: %v (file may be corrupted or incomplete)\n", err)
+		fmt.Printf("First 200 bytes of file: %s\n", string(data[:min(200, len(data))]))
+		return
 	}
 
 	// Start by processing components.schemas
@@ -43,10 +72,21 @@ func generatejson(v3 *openapi3.T) {
 		jsonParsed.DeleteP(nullStringPath)
 	}
 
+	// Create docs folder if not available
+	if _, err := os.Stat("docs"); os.IsNotExist(err) {
+		if err := os.Mkdir("docs", os.ModePerm); err != nil {
+			fmt.Printf("Warning: Failed to create docs directory: %v\n", err)
+			return
+		}
+	}
+
 	err = os.WriteFile("./docs/resolved_swagger.json", []byte(jsonParsed.StringIndent("", "  ")), 0644)
 	if err != nil {
-		log.Fatalf("Failed to write file: %v", err)
+		fmt.Printf("Warning: Failed to write resolved_swagger.json: %v\n", err)
+		return
 	}
+
+	fmt.Println("Swagger post-processing completed: resolved_swagger.json created")
 }
 
 
