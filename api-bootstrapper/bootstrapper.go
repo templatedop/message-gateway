@@ -250,13 +250,11 @@ var FxReadDB = fx.Module(
 		//db.NewDefaultDbFactory().CreateConnection,
 	),
 	fx.Invoke(readdblifecycle),
-	// fxhealthcheck.AsCheckerProbe(func(p readDBProbeParams) healthcheck.CheckerProbe {
-	// 	//return db.NewSQLProbe(p.DB)
-	// 	probe := db.NewSQLProbe(p.DB)
-	// 	probe.SetName(ReadDBProbeName)
-	// 	return probe
-	// }),
-	//fxhealthcheck.AsCheckerProbe(db.NewSQLProbe),
+	fxhealthcheck.AsCheckerProbe(func(p readDBProbeParams) healthcheck.CheckerProbe {
+		probe := db.NewSQLProbe(p.DB)
+		probe.SetName(ReadDBProbeName)
+		return probe
+	}),
 )
 
 type readDBLifecycleParams struct {
@@ -422,13 +420,11 @@ var fxDB = fx.Module(
 	),
 
 	fx.Invoke(dblifecycle),
-	// fxhealthcheck.AsCheckerProbe(func(p writeDBProbeParams) healthcheck.CheckerProbe {
-	// 	//return db.NewSQLProbe(p.DB)
-	// 	probe := db.NewSQLProbe(p.DB)
-	// 	probe.SetName(WriteDBProbeName)
-	// 	return probe
-	// }),
-	//fxhealthcheck.AsCheckerProbe(db.NewSQLProbe),
+	fxhealthcheck.AsCheckerProbe(func(p writeDBProbeParams) healthcheck.CheckerProbe {
+		probe := db.NewSQLProbe(p.DB)
+		probe.SetName(WriteDBProbeName)
+		return probe
+	}),
 )
 
 type writeDBProbeParams struct {
@@ -597,10 +593,10 @@ var fxRouterAdapter = fx.Module(
 // routerAdapterParams holds the dependencies for creating a router adapter
 type routerAdapterParams struct {
 	fx.In
-	Ctx      context.Context
-	Config   *config.Config
+	Ctx       context.Context
+	Config    *config.Config
 	Osdktrace *otelsdktrace.TracerProvider
-	Registry *prometheus.Registry
+	Registry  *prometheus.Registry
 }
 
 // newRouterAdapter creates and configures a router adapter from config
