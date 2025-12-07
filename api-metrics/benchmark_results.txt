@@ -1,0 +1,22 @@
+goos: linux
+goarch: amd64
+pkg: MgApplication/api-metrics
+cpu: Intel(R) Xeon(R) CPU @ 2.60GHz
+BenchmarkVictoriaMetrics_CounterInc-16                 	559452525	         6.320 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_GaugeSet-16                   	565491591	         6.345 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_GaugeAdd-16                   	269500627	        13.36 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_MetricCreation-16             	  652599	      5357 ns/op	    1803 B/op	      53 allocs/op
+BenchmarkVictoriaMetrics_WithLabels_5Different-16      	21017395	       178.5 ns/op	      64 B/op	       1 allocs/op
+BenchmarkVictoriaMetrics_WithLabels_ManyUnique-16      	21254635	       170.4 ns/op	      80 B/op	       1 allocs/op
+BenchmarkVictoriaMetrics_SummaryUpdate-16              	170657260	        21.60 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_Exposition_10Metrics-16       	 1000000	      3950 ns/op	    1904 B/op	      29 allocs/op
+BenchmarkVictoriaMetrics_Exposition_100Metrics-16      	  119859	     31541 ns/op	   17360 B/op	     212 allocs/op
+BenchmarkVictoriaMetrics_Exposition_1000Metrics-16     	   10000	    313913 ns/op	  226451 B/op	    2760 allocs/op
+BenchmarkVictoriaMetrics_ConcurrentCounterInc-16       	171712525	        20.61 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_ConcurrentGaugeAdd-16         	70109582	        52.04 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_ConcurrentWithLabels-16       	15325272	       263.1 ns/op	      64 B/op	       1 allocs/op
+BenchmarkVictoriaMetrics_MemoryUsage_100Metrics-16     	   32743	    102559 ns/op	   38177 B/op	     724 allocs/op
+BenchmarkVictoriaMetrics_MemoryUsage_1000Metrics-16    	    3096	   1205294 ns/op	  485886 B/op	    8534 allocs/op
+BenchmarkVictoriaMetrics_RealisticHTTPMetrics-16       	 5872417	       564.4 ns/op	     220 B/op	       7 allocs/op
+PASS
+ok  	MgApplication/api-metrics	69.377s
