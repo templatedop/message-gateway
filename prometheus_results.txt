@@ -1,0 +1,17 @@
+goos: linux
+goarch: amd64
+pkg: MgApplication/api-metrics
+cpu: Intel(R) Xeon(R) CPU @ 2.60GHz
+BenchmarkPrometheus_CounterInc-16                 	458315936	         8.056 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrometheus_GaugeSet-16                   	440353144	         8.039 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrometheus_GaugeAdd-16                   	271990544	        13.19 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrometheus_MetricCreation-16             	  465232	      7591 ns/op	    3144 B/op	      37 allocs/op
+BenchmarkPrometheus_WithLabels-16                 	21729838	       158.7 ns/op	       3 B/op	       1 allocs/op
+BenchmarkPrometheus_HistogramObserve-16           	120632203	        29.41 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrometheus_Exposition_100Metrics-16      	    7903	    419441 ns/op	  210105 B/op	    2469 allocs/op
+BenchmarkPrometheus_Exposition_1000Metrics-16     	     710	   4708735 ns/op	 1728377 B/op	   24108 allocs/op
+BenchmarkPrometheus_ConcurrentCounterInc-16       	200290710	        18.67 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrometheus_ConcurrentWithLabels-16       	20594318	       363.2 ns/op	       3 B/op	       1 allocs/op
+BenchmarkPrometheus_MemoryUsage_1000Metrics-16    	     580	   5600721 ns/op	 1638533 B/op	   20593 allocs/op
+PASS
+ok  	MgApplication/api-metrics	51.967s

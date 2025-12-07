@@ -1,0 +1,17 @@
+goos: linux
+goarch: amd64
+pkg: MgApplication/api-metrics
+cpu: Intel(R) Xeon(R) CPU @ 2.60GHz
+BenchmarkVictoriaMetrics_CounterInc_Comparison-16                 	558077193	         6.363 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_GaugeSet_Comparison-16                   	570001425	         6.296 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_GaugeAdd_Comparison-16                   	270441001	        13.35 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_MetricCreation_Comparison-16             	  704175	      5384 ns/op	    1800 B/op	      53 allocs/op
+BenchmarkVictoriaMetrics_WithLabels_Comparison-16                 	21642681	       171.7 ns/op	      64 B/op	       1 allocs/op
+BenchmarkVictoriaMetrics_SummaryUpdate_Comparison-16              	171706298	        21.03 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_Exposition_100Metrics_Comparison-16      	  111924	     30442 ns/op	   17360 B/op	     212 allocs/op
+BenchmarkVictoriaMetrics_Exposition_1000Metrics_Comparison-16     	   10000	    327404 ns/op	  226451 B/op	    2760 allocs/op
+BenchmarkVictoriaMetrics_ConcurrentCounterInc_Comparison-16       	195008214	        20.28 ns/op	       0 B/op	       0 allocs/op
+BenchmarkVictoriaMetrics_ConcurrentWithLabels_Comparison-16       	15677787	       235.3 ns/op	      64 B/op	       1 allocs/op
+BenchmarkVictoriaMetrics_MemoryUsage_1000Metrics_Comparison-16    	    3069	   1206083 ns/op	  485885 B/op	    8534 allocs/op
+PASS
+ok  	MgApplication/api-metrics	50.761s
