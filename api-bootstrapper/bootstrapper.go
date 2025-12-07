@@ -17,9 +17,9 @@ import (
 	config "MgApplication/api-config"
 	// g "MgApplication/grpc-server" // Commented out - grpc-server not implemented yet
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/prometheus/client_golang/prometheus"
 	otelsdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	router "MgApplication/api-server"
@@ -236,14 +236,14 @@ var FxReadDB = fx.Module(
 			Name: "read_db",
 			Target: func(params struct {
 				fx.In
-				Config    db.DBConfig `name:"read_config"`
-				Osdktrace *otelsdktrace.TracerProvider
-				Registry  *prometheus.Registry
+				Config     db.DBConfig `name:"read_config"`
+				Osdktrace  *otelsdktrace.TracerProvider
+				MetricsSet *metrics.Set
 			}) (*db.DB, error) {
 				factory := db.NewDefaultDbFactory()
 				factory.SetCollectorName(ReadDBCollectorName)
 				//factory.ReadDBCollectorName = ReadDBCollectorName
-				return factory.CreateConnection(&params.Config, params.Osdktrace, params.Registry)
+				return factory.CreateConnection(&params.Config, params.Osdktrace, params.MetricsSet)
 			},
 			//Target: db.NewDefaultDbFactory().CreateConnection,
 		},
@@ -400,13 +400,13 @@ var fxDB = fx.Module(
 			Name: "write_db",
 			Target: func(params struct {
 				fx.In
-				Config    db.DBConfig `name:"write_config"`
-				Osdktrace *otelsdktrace.TracerProvider
-				Registry  *prometheus.Registry
+				Config     db.DBConfig `name:"write_config"`
+				Osdktrace  *otelsdktrace.TracerProvider
+				MetricsSet *metrics.Set
 			}) (*db.DB, error) {
 				factory := db.NewDefaultDbFactory()
 				factory.SetCollectorName(WriteDBCollectorName)
-				return factory.CreateConnection(&params.Config, params.Osdktrace, params.Registry)
+				return factory.CreateConnection(&params.Config, params.Osdktrace, params.MetricsSet)
 			},
 			// Target: db.NewDefaultDbFactory().CreateConnection,
 		},
@@ -597,10 +597,10 @@ var fxRouterAdapter = fx.Module(
 // routerAdapterParams holds the dependencies for creating a router adapter
 type routerAdapterParams struct {
 	fx.In
-	Ctx      context.Context
-	Config   *config.Config
-	Osdktrace *otelsdktrace.TracerProvider
-	Registry *prometheus.Registry
+	Ctx        context.Context
+	Config     *config.Config
+	Osdktrace  *otelsdktrace.TracerProvider
+	MetricsSet *metrics.Set
 }
 
 // newRouterAdapter creates and configures a router adapter from config

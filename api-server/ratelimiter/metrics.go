@@ -1,36 +1,23 @@
 package ratelimiter
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/VictoriaMetrics/metrics"
 )
 
 var (
-	AllowedTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "leakybucket_allowed_total",
-			Help: "Total number of allowed requests",
-		},
-	)
-
-	RejectedTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "leakybucket_rejected_total",
-			Help: "Total number of rejected requests",
-		},
-	)
+	AllowedTotal  *metrics.Counter
+	RejectedTotal *metrics.Counter
+	FillLevel     *metrics.Gauge
 )
 
-func InitMetrics(bucket *LeakyBucket, p prometheus.Registerer) {
+func InitMetrics(bucket *LeakyBucket, set *metrics.Set) {
+	if set == nil {
+		set = metrics.NewSet()
+	}
 
-	p.MustRegister(
-		prometheus.NewGaugeFunc(
-			prometheus.GaugeOpts{
-				Name: "leakybucket_fill_level",
-				Help: "Current fill level of the leaky bucket",
-			},
-			func() float64 { return bucket.PeekFill() }, // closure captures your bucket
-		),
-		AllowedTotal,
-		RejectedTotal,
-	)
+	AllowedTotal = set.NewCounter("leakybucket_allowed_total")
+	RejectedTotal = set.NewCounter("leakybucket_rejected_total")
+	FillLevel = set.NewGauge("leakybucket_fill_level", func() float64 {
+		return bucket.PeekFill()
+	})
 }

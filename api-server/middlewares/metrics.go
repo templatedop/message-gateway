@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 
 type RequestMetricsMiddlewareConfig struct {
 	Skipper                 func(*gin.Context) bool
-	Registry                prometheus.Registerer
+	MetricsSet              *metrics.Set
 	Namespace               string
 	Buckets                 []float64
 	Subsystem               string
@@ -26,18 +27,17 @@ type RequestMetricsMiddlewareConfig struct {
 }
 
 var DefaultRequestMetricsMiddlewareConfig = RequestMetricsMiddlewareConfig{
-	Registry:                prometheus.DefaultRegisterer,
+	MetricsSet:              nil,
 	Namespace:               "",
 	Subsystem:               "",
-	Buckets:                 prometheus.DefBuckets,
+	Buckets:                 nil,
 	NormalizeRequestPath:    true,
 	NormalizeResponseStatus: true,
 }
 
 var (
-	metricsOnce          sync.Once
-	httpRequestsCounter  *prometheus.CounterVec
-	httpRequestsDuration *prometheus.HistogramVec
+	metricsOnce sync.Once
+	metricsSet  *metrics.Set
 )
 
 func RequestMetricsMiddleware() gin.HandlerFunc {
@@ -49,8 +49,8 @@ func RequestMetricsMiddlewareWithConfig(config RequestMetricsMiddlewareConfig) g
 		config.Skipper = func(*gin.Context) bool { return false }
 	}
 
-	if config.Registry == nil {
-		config.Registry = DefaultRequestMetricsMiddlewareConfig.Registry
+	if config.MetricsSet == nil {
+		config.MetricsSet = metrics.NewSet()
 	}
 
 	if config.Namespace == "" {
@@ -61,41 +61,9 @@ func RequestMetricsMiddlewareWithConfig(config RequestMetricsMiddlewareConfig) g
 		config.Subsystem = DefaultRequestMetricsMiddlewareConfig.Subsystem
 	}
 
-	if len(config.Buckets) == 0 {
-		config.Buckets = DefaultRequestMetricsMiddlewareConfig.Buckets
-	}
-
-	// Register metrics only once using sync.Once to avoid panic on multiple middleware usage
+	// Store the metrics set for use in handler
 	metricsOnce.Do(func() {
-		httpRequestsCounter = prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Namespace: config.Namespace,
-				Subsystem: config.Subsystem,
-				Name:      HttpServerMetricsRequestsCount,
-				Help:      "Number of processed HTTP requests",
-			},
-			[]string{
-				"status",
-				"method",
-				"path",
-			},
-		)
-
-		httpRequestsDuration = prometheus.NewHistogramVec(
-			prometheus.HistogramOpts{
-				Namespace: config.Namespace,
-				Subsystem: config.Subsystem,
-				Name:      HttpServerMetricsRequestsDuration,
-				Help:      "Time spent processing HTTP requests",
-				Buckets:   config.Buckets,
-			},
-			[]string{
-				"method",
-				"path",
-			},
-		)
-
-		config.Registry.MustRegister(httpRequestsCounter, httpRequestsDuration)
+		metricsSet = config.MetricsSet
 	})
 
 	return func(c *gin.Context) {
@@ -119,9 +87,9 @@ func RequestMetricsMiddlewareWithConfig(config RequestMetricsMiddlewareConfig) g
 			}
 		}
 
-		timer := prometheus.NewTimer(httpRequestsDuration.WithLabelValues(req.Method, path))
+		start := time.Now()
 		c.Next()
-		timer.ObserveDuration()
+		duration := time.Since(start).Seconds()
 
 		status := ""
 		if config.NormalizeResponseStatus {
@@ -130,6 +98,15 @@ func RequestMetricsMiddlewareWithConfig(config RequestMetricsMiddlewareConfig) g
 			status = strconv.Itoa(c.Writer.Status())
 		}
 
-		httpRequestsCounter.WithLabelValues(status, req.Method, path).Inc()
+		// Create metric names with labels
+		// VictoriaMetrics uses metric names with labels embedded in the name
+		counterName := fmt.Sprintf(`%s{status="%s",method="%s",path="%s"}`,
+			HttpServerMetricsRequestsCount, status, req.Method, path)
+		summaryName := fmt.Sprintf(`%s{method="%s",path="%s"}`,
+			HttpServerMetricsRequestsDuration, req.Method, path)
+
+		// Get or create metrics
+		metricsSet.GetOrCreateCounter(counterName).Inc()
+		metricsSet.GetOrCreateSummary(summaryName).Update(duration)
 	}
 }

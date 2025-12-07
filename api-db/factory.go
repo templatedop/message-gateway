@@ -9,16 +9,16 @@ import (
 
 	apierrors "MgApplication/api-errors"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/prometheus/client_golang/prometheus"
 	otelsdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // DBFactory interface to allow for extensibility
 type DBFactory interface {
 	NewPreparedDBConfig(input DBConfig) *DBConfig
-	CreateConnection(dbConfig *DBConfig, osdktrace *otelsdktrace.TracerProvider, Registry *prometheus.Registry) (*DB, error)
+	CreateConnection(dbConfig *DBConfig, osdktrace *otelsdktrace.TracerProvider, metricsSet *metrics.Set) (*DB, error)
 	SetCollectorName(name string)
 }
 
@@ -68,7 +68,7 @@ func (f *DefaultDbFactory) NewPreparedDBConfig(input DBConfig) *DBConfig {
 }
 
 // CreateConnection uses the prepared DBConfig to establish a database connection.
-func (f *DefaultDbFactory) CreateConnection(dbConfig *DBConfig, osdktrace *otelsdktrace.TracerProvider, Registry *prometheus.Registry) (*DB, error) {
+func (f *DefaultDbFactory) CreateConnection(dbConfig *DBConfig, osdktrace *otelsdktrace.TracerProvider, metricsSet *metrics.Set) (*DB, error) {
 	// Prepare the pgxpool.Config
 	pgxConfig, err := Pgxconfig(dbConfig, osdktrace)
 	if err != nil {
@@ -77,7 +77,7 @@ func (f *DefaultDbFactory) CreateConnection(dbConfig *DBConfig, osdktrace *otels
 	}
 
 	// Create and return the DB connection
-	conn, err := NewDB(dbConfig, pgxConfig, Registry, f.CollectorName)
+	conn, err := NewDB(dbConfig, pgxConfig, metricsSet, f.CollectorName)
 	if err != nil {
 		appError := apierrors.NewAppError("Error occurred while creating db connection", "500", err)
 		return nil, &appError
@@ -135,7 +135,7 @@ func Pgxconfig(cfg *DBConfig, osdktrace *otelsdktrace.TracerProvider) (*pgxpool.
 }
 
 // NewDB creates a new database connection with the given configuration
-func NewDB(cfg *DBConfig, pcfg *pgxpool.Config, Registry *prometheus.Registry, collectorName string) (*DB, error) {
+func NewDB(cfg *DBConfig, pcfg *pgxpool.Config, metricsSet *metrics.Set, collectorName string) (*DB, error) {
 
 	ctx := context.Background()
 	db, err := pgxpool.NewWithConfig(ctx, pcfg)
@@ -143,12 +143,14 @@ func NewDB(cfg *DBConfig, pcfg *pgxpool.Config, Registry *prometheus.Registry, c
 		return nil, err
 	}
 
+	// Create collector - with VictoriaMetrics, metrics are automatically registered in the set
 	collector := NewCollector(db, map[string]string{
 		"db_name":        cfg.DBDatabase,
 		"collector_name": collectorName,
-	})
-	Registry.MustRegister(collector)
-	//	log.Info(nil, "collector in db:", collector)
+	}, metricsSet)
+
+	// Store collector for periodic updates if needed
+	_ = collector
 
 	return &DB{
 		db,

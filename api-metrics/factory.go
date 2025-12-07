@@ -1,11 +1,11 @@
 package fxmetrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/VictoriaMetrics/metrics"
 )
 
 type MetricsRegistryFactory interface {
-	Create() (*prometheus.Registry, error)
+	Create() (*metrics.Set, error)
 }
 
 type DefaultMetricsRegistryFactory struct{}
@@ -14,6 +14,6 @@ func NewDefaultMetricsRegistryFactory() MetricsRegistryFactory {
 	return &DefaultMetricsRegistryFactory{}
 }
 
-func (f *DefaultMetricsRegistryFactory) Create() (*prometheus.Registry, error) {
-	return prometheus.NewRegistry(), nil
+func (f *DefaultMetricsRegistryFactory) Create() (*metrics.Set, error) {
+	return metrics.NewSet(), nil
 }

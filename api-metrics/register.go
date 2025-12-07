@@ -1,35 +1,19 @@
 package fxmetrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/fx"
 )
 
-func AsMetricsCollector(collector prometheus.Collector) fx.Option {
-	return fx.Supply(
-		fx.Annotate(
-			collector,
-			fx.As(new(prometheus.Collector)),
-			fx.ResultTags(`group:"metrics-collectors"`),
-		),
-	)
+// Note: VictoriaMetrics doesn't use the collector pattern like Prometheus.
+// Metrics are created directly in the Set and automatically registered.
+// These functions are kept for compatibility but are no-ops.
+
+func AsMetricsCollector(collector interface{}) fx.Option {
+	// VictoriaMetrics doesn't use collectors - metrics are created directly
+	return fx.Options()
 }
 
-func AsMetricsCollectors(collectors ...prometheus.Collector) fx.Option {
-	registrations := []fx.Option{}
-
-	for _, collector := range collectors {
-		registrations = append(
-			registrations,
-			fx.Supply(
-				fx.Annotate(
-					collector,
-					fx.As(new(prometheus.Collector)),
-					fx.ResultTags(`group:"metrics-collectors"`),
-				),
-			),
-		)
-	}
-
-	return fx.Options(registrations...)
+func AsMetricsCollectors(collectors ...interface{}) fx.Option {
+	// VictoriaMetrics doesn't use collectors - metrics are created directly
+	return fx.Options()
 }

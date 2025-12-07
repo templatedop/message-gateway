@@ -12,10 +12,9 @@ import (
 	config "MgApplication/api-config"
 	apierrors "MgApplication/api-errors"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/arl/statsviz"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	//healthcheck "MgApplication/api-healthcheck"
 	log "MgApplication/api-log"
@@ -184,7 +183,7 @@ func configureGinMode(cfg *config.Config) {
 }
 
 // configureRateLimiting sets up rate limiting middleware based on configuration
-func configureRateLimiting(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+func configureRateLimiting(app *gin.Engine, cfg *config.Config, metricsSet *metrics.Set) {
 	ratelimit := "medium" // default
 	if cfg.Exists("server.ratelimit") {
 		ratelimit = cfg.GetString("server.ratelimit")
@@ -206,11 +205,11 @@ func configureRateLimiting(app *gin.Engine, cfg *config.Config, metricsRegistry 
 	}
 
 	app.Use(middlewares.RateMiddleware(globalBucket))
-	ratelimiter.InitMetrics(globalBucket, metricsRegistry)
+	ratelimiter.InitMetrics(globalBucket, metricsSet)
 }
 
 // registerCoreMiddlewares adds body limiter, rate limiter, CORS, recovery, and error handler
-func registerCoreMiddlewares(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+func registerCoreMiddlewares(app *gin.Engine, cfg *config.Config, metricsSet *metrics.Set) {
 	// Get server config with fallback
 	serverCfg, err := cfg.Of("server")
 	if err != nil {
@@ -236,7 +235,7 @@ func registerCoreMiddlewares(app *gin.Engine, cfg *config.Config, metricsRegistr
 		middlewares.BodyLimitErrorHandler())
 
 	// Configure rate limiting
-	configureRateLimiting(app, cfg, metricsRegistry)
+	configureRateLimiting(app, cfg, metricsSet)
 
 	// Add core middlewares
 	app.Use(
@@ -275,7 +274,7 @@ func parseMetricBuckets(cfg *config.Config) []float64 {
 
 // registerObservabilityMiddlewares adds tracing, logging, and metrics middleware
 func registerObservabilityMiddlewares(app *gin.Engine, cfg *config.Config,
-	osdktrace *otelsdktrace.TracerProvider, metricsRegistry *prometheus.Registry) {
+	osdktrace *otelsdktrace.TracerProvider, metricsSet *metrics.Set) {
 
 	// Configure tracing
 	if cfg.GetBool("trace.enabled") {
@@ -296,7 +295,7 @@ func registerObservabilityMiddlewares(app *gin.Engine, cfg *config.Config,
 	if cfg.GetBool("metrics.collect.routes") {
 		buckets := parseMetricBuckets(cfg)
 		metricsMiddlewareConfig := middlewares.RequestMetricsMiddlewareConfig{
-			Registry:                metricsRegistry,
+			MetricsSet:              metricsSet,
 			Namespace:               "",
 			Subsystem:               Sanitize("router"),
 			Buckets:                 buckets,
@@ -422,14 +421,16 @@ func registerStatsvizEndpoints(app *gin.Engine, cfg *config.Config) {
 }
 
 // registerDebugEndpoints registers pprof, dashboard, statsviz, and metrics endpoints
-func registerDebugEndpoints(app *gin.Engine, cfg *config.Config, metricsRegistry *prometheus.Registry) {
+func registerDebugEndpoints(app *gin.Engine, cfg *config.Config, metricsSet *metrics.Set) {
 	// Metrics endpoint
 	if cfg.GetBool("metrics.expose") {
 		metricsPath := DefaultMetricsPath
 		if metricsPath == "" {
 			metricsPath = "/metrics"
 		}
-		app.GET(metricsPath, gin.WrapH(promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{})))
+		app.GET(metricsPath, func(c *gin.Context) {
+			metricsSet.WritePrometheus(c.Writer)
+		})
 		log.GetBaseLoggerInstance().ToZerolog().Debug().Msg("registered metrics handler")
 	}
 
@@ -451,7 +452,7 @@ func registerDebugEndpoints(app *gin.Engine, cfg *config.Config, metricsRegistry
 
 // createAndConfigureRouter creates router and configures connection limits, timeouts, and metrics
 func createAndConfigureRouter(ctx context.Context, app *gin.Engine, cfg *config.Config,
-	registries []*registry, metricsRegistry *prometheus.Registry) *Router {
+	registries []*registry, metricsSet *metrics.Set) *Router {
 
 	r := NewRouter(app, cfg, registries)
 	r.ctx = ctx // Set the signal-aware context
@@ -464,7 +465,7 @@ func createAndConfigureRouter(ctx context.Context, app *gin.Engine, cfg *config.
 	}
 
 	// Initialize connection metrics
-	InitConnectionMetrics(metricsRegistry)
+	InitConnectionMetrics(metricsSet)
 	SetMaxConnections(r.MaxConnections)
 
 	// Configure server address
@@ -487,8 +488,8 @@ func createAndConfigureRouter(ctx context.Context, app *gin.Engine, cfg *config.
 // MAIN SERVER INITIALIZATION FUNCTION
 // ============================================================================
 
-// func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, Checker *healthcheck.Checker) *Router {
-func Defaultgin(ctx context.Context, cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsRegistry *prometheus.Registry, registries []*registry) *Router {
+// func Defaultgin(cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsSet *metrics.Set, Checker *healthcheck.Checker) *Router {
+func Defaultgin(ctx context.Context, cfg *config.Config, osdktrace *otelsdktrace.TracerProvider, MetricsSet *metrics.Set, registries []*registry) *Router {
 	// Configure Gin mode based on environment
 	configureGinMode(cfg)
 
@@ -498,18 +499,18 @@ func Defaultgin(ctx context.Context, cfg *config.Config, osdktrace *otelsdktrace
 	app := gin.New()
 
 	// Register middlewares in order
-	registerCoreMiddlewares(app, cfg, MetricsRegistry)
+	registerCoreMiddlewares(app, cfg, MetricsSet)
 	registerSecurityMiddlewares(app, cfg)
-	registerObservabilityMiddlewares(app, cfg, osdktrace, MetricsRegistry)
+	registerObservabilityMiddlewares(app, cfg, osdktrace, MetricsSet)
 
 	// Register global routes: healthz, NoRoute, NoMethod
 	Setup(app)
 
 	// Register debug and monitoring endpoints
-	registerDebugEndpoints(app, cfg, MetricsRegistry)
+	registerDebugEndpoints(app, cfg, MetricsSet)
 
 	// Create and configure router with timeouts and connection limits
-	return createAndConfigureRouter(ctx, app, cfg, registries, MetricsRegistry)
+	return createAndConfigureRouter(ctx, app, cfg, registries, MetricsSet)
 }
 
 var isShuttingDown atomic.Value
